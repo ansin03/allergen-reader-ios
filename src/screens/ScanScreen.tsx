@@ -1,13 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
-  Image, Alert, ScrollView,
+  Alert, ScrollView,
 } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Allergen, ScanResult } from '../types';
-import { analyzeApi, historyApi } from '../services/api';
+import { analyzeApi } from '../services/api';
 
 interface Props {
   allergens: Allergen[];
@@ -15,16 +14,14 @@ interface Props {
 }
 
 export default function ScanScreen({ allergens, onResult }: Props) {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [cameraActive, setCameraActive] = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const cameraRef = useRef<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const activeNames = allergens.filter(a => a.enabled).map(a => a.name);
 
-  const analyzeImage = async (base64: string, uri?: string) => {
+  const analyzeImage = async (uri: string) => {
     setLoading(true);
     try {
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
       const result = await analyzeApi.analyze(base64, activeNames);
       onResult(result, uri);
     } catch (err) {
@@ -34,48 +31,20 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     }
   };
 
-  const takePicture = async () => {
-    if (!cameraRef.current) { Alert.alert('Error', 'Camera not ready'); return; }
-    try {
-      setLoading(true);
-      await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        onPictureSaved: async (photo: any) => {
-          setCameraActive(false);
-          try {
-            const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
-            await analyzeImage(base64, photo.uri);
-          } catch (err) {
-            Alert.alert('Error', err instanceof Error ? err.message : String(err));
-            setLoading(false);
-          }
-        },
-      });
-    } catch (err) {
-      Alert.alert('Camera Error', err instanceof Error ? err.message : String(err));
-      setCameraActive(false);
-      setLoading(false);
+  const takePhoto = async () => {
+    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+    if (!granted) { Alert.alert('Camera permission required'); return; }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false });
+    if (!result.canceled && result.assets[0]?.uri) {
+      analyzeImage(result.assets[0].uri);
     }
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      base64: false,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0].uri) {
-      const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
-      analyzeImage(base64, result.assets[0].uri);
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled && result.assets[0]?.uri) {
+      analyzeImage(result.assets[0].uri);
     }
-  };
-
-  const openCamera = async () => {
-    if (!permission?.granted) {
-      const { granted } = await requestPermission();
-      if (!granted) { Alert.alert('Camera permission required'); return; }
-    }
-    setCameraActive(true);
   };
 
   if (loading) {
@@ -87,37 +56,13 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     );
   }
 
-  if (cameraActive) {
-    return (
-      <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={styles.camera} facing="back">
-          <View style={styles.cameraOverlay}>
-            <View style={styles.scanFrame} />
-            <Text style={styles.cameraHint}>Point at an ingredient label</Text>
-            <View style={styles.cameraButtons}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setCameraActive(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.captureBtn} onPress={takePicture}>
-                <View style={styles.captureBtnInner} />
-              </TouchableOpacity>
-              <View style={{ width: 80 }} />
-            </View>
-          </View>
-        </CameraView>
-      </View>
-    );
-  }
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Scan a Label</Text>
       <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
-
-      <TouchableOpacity style={styles.primaryBtn} onPress={openCamera}>
+      <TouchableOpacity style={styles.primaryBtn} onPress={takePhoto}>
         <Text style={styles.primaryBtnText}>📷  Take Photo</Text>
       </TouchableOpacity>
-
       <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
         <Text style={styles.secondaryBtnText}>🖼️  Upload from Library</Text>
       </TouchableOpacity>
@@ -126,23 +71,13 @@ export default function ScanScreen({ allergens, onResult }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container:      { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f8fafc' },
-  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-  title:          { fontSize: 24, fontWeight: '800', color: '#1e293b', marginBottom: 8 },
-  subtitle:       { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 40, lineHeight: 20 },
-  loadingText:    { marginTop: 16, fontSize: 16, color: '#64748b', fontWeight: '600' },
-  primaryBtn:     { width: '100%', backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  container:        { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f8fafc' },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
+  title:            { fontSize: 24, fontWeight: '800', color: '#1e293b', marginBottom: 8 },
+  subtitle:         { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 40, lineHeight: 20 },
+  loadingText:      { marginTop: 16, fontSize: 16, color: '#64748b', fontWeight: '600' },
+  primaryBtn:       { width: '100%', backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
+  primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
   secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: '#e2e8f0' },
   secondaryBtnText: { color: '#475569', fontWeight: '700', fontSize: 16 },
-  cameraContainer: { flex: 1 },
-  camera:          { flex: 1 },
-  cameraOverlay:   { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingVertical: 60 },
-  scanFrame:       { width: 260, height: 180, borderWidth: 2, borderColor: '#fff', borderRadius: 12, backgroundColor: 'transparent' },
-  cameraHint:      { color: '#fff', fontSize: 14, fontWeight: '600' },
-  cameraButtons:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20 },
-  captureBtn:      { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
-  captureBtnInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff' },
-  cancelBtn:       { width: 80, alignItems: 'center' },
-  cancelBtnText:   { color: '#fff', fontWeight: '600', fontSize: 14 },
 });
