@@ -26,23 +26,28 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     setLoading(true);
     try {
       const result = await analyzeApi.analyze(base64, activeNames);
-      const item = { ...result, id: Date.now().toString(), imageUrl: uri, profileId: 'default' };
-      historyApi.add(item).catch(() => {});
       onResult(result, uri);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Analysis failed');
+      Alert.alert('Analysis Error', err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
     }
   };
 
   const takePicture = async () => {
-    if (!cameraRef.current) return;
-    const photo = await cameraRef.current.takePictureAsync({ base64: false, quality: 0.8 });
-    if (!photo?.uri) return;
-    setCameraActive(false);
-    const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
-    analyzeImage(base64, photo.uri);
+    if (!cameraRef.current) { Alert.alert('Error', 'Camera not ready'); return; }
+    try {
+      // Take photo BEFORE closing camera
+      const photo = await cameraRef.current.takePictureAsync({ base64: false, quality: 0.7 });
+      setCameraActive(false);
+      if (!photo?.uri) { Alert.alert('Error', 'No photo captured'); return; }
+      const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
+      await analyzeImage(base64, photo.uri);
+    } catch (err) {
+      Alert.alert('Camera Error', err instanceof Error ? err.message : String(err));
+      setCameraActive(false);
+      setLoading(false);
+    }
   };
 
   const pickImage = async () => {
