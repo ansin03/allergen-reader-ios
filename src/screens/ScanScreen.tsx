@@ -4,7 +4,7 @@ import {
   Alert, ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Allergen, ScanResult } from '../types';
 import { analyzeApi } from '../services/api';
 
@@ -21,11 +21,11 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   const analyzeImage = async (uri: string) => {
     setLoading(true);
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
       const result = await analyzeApi.analyze(base64, activeNames);
       onResult(result, uri);
     } catch (err) {
-      Alert.alert('Analysis Error', err instanceof Error ? err.message : 'Analysis failed');
+      Alert.alert('Analysis Error', `${err instanceof Error ? err.message : String(err)}\nURI: ${uri?.substring(0, 80)}`);
     } finally {
       setLoading(false);
     }

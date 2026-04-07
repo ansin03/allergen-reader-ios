@@ -20,105 +20,117 @@ function greeting() {
 }
 
 const RATING_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  safe:    { label: '✓ Safe',    bg: '#d1fae5', color: '#065f46' },
-  warning: { label: '⚡ Caution', bg: '#fef3c7', color: '#92400e' },
+  safe:    { label: '✓ Safe',    bg: '#dcfce7', color: '#166534' },
+  warning: { label: '⚡ Caution', bg: '#fef9c3', color: '#854d0e' },
   danger:  { label: '⚠ Danger',  bg: '#fee2e2', color: '#991b1b' },
 };
 
 export default function HomeScreen({ history, allergens, onStartScan, onViewResult, onGoToSettings }: Props) {
   const navigation = useNavigation<any>();
-  const active  = allergens.filter(a => a.enabled);
-  const safe    = history.filter(h => h.safetyRating === 'safe').length;
-  const warning = history.filter(h => h.safetyRating === 'warning').length;
-  const danger  = history.filter(h => h.safetyRating === 'danger').length;
-  const recent  = history[0];
-
-  const stats = [
-    { label: 'Total Scans', value: history.length, bg: '#ede9fe', color: '#5b21b6', icon: '📊' },
-    { label: 'Safe',        value: safe,            bg: '#d1fae5', color: '#065f46', icon: '✅' },
-    { label: 'Cautions',    value: warning,         bg: '#fef3c7', color: '#92400e', icon: '⚠️' },
-    { label: 'Dangers',     value: danger,          bg: '#fee2e2', color: '#991b1b', icon: '🚨' },
-  ];
+  const active = allergens.filter(a => a.enabled);
+  const recent = history[0];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Greeting */}
-      <Text style={styles.greeting}>{greeting()} 👋</Text>
-      <Text style={styles.headline}>
-        {active.length === 0
-          ? 'Set up your allergen profile'
-          : `Tracking ${active.length} allergen${active.length !== 1 ? 's' : ''}`}
-      </Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-      {/* Hero CTA */}
-      <TouchableOpacity style={styles.heroCta} onPress={() => { onStartScan(); navigation.navigate('Scan'); }}>
-        <Text style={styles.heroLabel}>AI-POWERED SCANNER</Text>
-        <Text style={styles.heroTitle}>Scan an Ingredient Label</Text>
-        <Text style={styles.heroSubtitle}>Take a photo or upload any food image</Text>
-        <View style={styles.heroBtn}>
-          <Text style={styles.heroBtnText}>📷  Open Scanner</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>{greeting()}</Text>
+          <Text style={styles.headline}>AllergenSafe</Text>
+        </View>
+        <View style={styles.shieldBadge}>
+          <Text style={styles.shieldEmoji}>🛡️</Text>
+        </View>
+      </View>
+
+
+      {/* Hero Scan Button */}
+      <TouchableOpacity
+        style={styles.heroCta}
+        onPress={() => { onStartScan(); navigation.navigate('Scan'); }}
+        activeOpacity={0.92}
+      >
+        <View style={styles.heroContent}>
+          <View>
+            <Text style={styles.heroEyebrow}>AI-POWERED</Text>
+            <Text style={styles.heroTitle}>Scan a Label</Text>
+            <Text style={styles.heroSubtitle}>Photo or upload — results in seconds</Text>
+          </View>
+          <View style={styles.heroIconCircle}>
+            <Text style={styles.heroIcon}>📷</Text>
+          </View>
+        </View>
+        <View style={styles.heroPillBtn}>
+          <Text style={styles.heroPillText}>Open Scanner →</Text>
         </View>
       </TouchableOpacity>
 
-      {/* Stats */}
-      <View style={styles.statsGrid}>
-        {stats.map(s => (
-          <View key={s.label} style={[styles.statCard, { backgroundColor: s.bg }]}>
-            <Text style={styles.statIcon}>{s.icon}</Text>
-            <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
-            <Text style={[styles.statLabel, { color: s.color }]}>{s.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Active Allergens */}
+      {/* Your Allergen List */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>ACTIVE ALERTS</Text>
-          <TouchableOpacity onPress={onGoToSettings}>
-            <Text style={styles.cardAction}>Edit →</Text>
+          <View>
+            <Text style={styles.cardTitle}>Your Allergen List</Text>
+            <Text style={styles.cardSubtitle}>
+              {active.length === 0
+                ? 'No allergens configured'
+                : `${active.length} active alert${active.length !== 1 ? 's' : ''}`}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
         </View>
+
         {active.length === 0 ? (
-          <TouchableOpacity style={styles.emptyAllergens} onPress={onGoToSettings}>
-            <Text style={styles.emptyAllergensText}>+ Add allergen alerts</Text>
+          <TouchableOpacity style={styles.emptyState} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.emptyStateIcon}>➕</Text>
+            <Text style={styles.emptyStateText}>Add your first allergen</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.allergenChips}>
+          <View style={styles.chipGrid}>
             {active.map(a => (
               <View key={a.id} style={[styles.chip, { backgroundColor: SEVERITY_CONFIG[a.severity].color }]}>
-                <Text style={[styles.chipText, { color: SEVERITY_CONFIG[a.severity].textColor }]}>
-                  {a.emoji} {a.name}
-                </Text>
+                <Text style={styles.chipEmoji}>{a.emoji}</Text>
+                <Text style={[styles.chipText, { color: SEVERITY_CONFIG[a.severity].textColor }]}>{a.name}</Text>
               </View>
             ))}
           </View>
         )}
       </View>
 
-      {/* Recent Scan */}
+      {/* Last Scan */}
       {recent && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>LAST SCAN</Text>
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.cardTitle}>Last Scan</Text>
+              <Text style={styles.cardSubtitle}>
+                {new Date(recent.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </Text>
+            </View>
+            <View style={[styles.ratingPill, { backgroundColor: RATING_BADGE[recent.safetyRating].bg }]}>
+              <Text style={[styles.ratingPillText, { color: RATING_BADGE[recent.safetyRating].color }]}>
+                {RATING_BADGE[recent.safetyRating].label}
+              </Text>
+            </View>
+          </View>
           <TouchableOpacity style={styles.recentRow} onPress={() => onViewResult(recent)}>
             {recent.imageUrl
               ? <Image source={{ uri: recent.imageUrl }} style={styles.recentImage} />
-              : <View style={styles.recentImagePlaceholder}><Text style={styles.recentImageEmoji}>🏷️</Text></View>
+              : <View style={styles.recentImagePlaceholder}><Text style={{ fontSize: 28 }}>🏷️</Text></View>
             }
             <View style={styles.recentInfo}>
-              <View style={[styles.badge, { backgroundColor: RATING_BADGE[recent.safetyRating].bg }]}>
-                <Text style={[styles.badgeText, { color: RATING_BADGE[recent.safetyRating].color }]}>
-                  {RATING_BADGE[recent.safetyRating].label}
-                </Text>
-              </View>
-              <Text style={styles.recentName} numberOfLines={1}>
+              <Text style={styles.recentName} numberOfLines={2}>
                 {recent.productName || (recent.detectedAllergens.length > 0
                   ? `${recent.detectedAllergens.length} allergen${recent.detectedAllergens.length !== 1 ? 's' : ''} detected`
                   : 'No allergens found')}
               </Text>
-              <Text style={styles.recentDate}>
-                {new Date(recent.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </Text>
+              {recent.detectedAllergens.length > 0 && (
+                <Text style={styles.recentAllergens} numberOfLines={1}>
+                  {recent.detectedAllergens.map(d => d.matchedAllergens).flat().join(', ')}
+                </Text>
+              )}
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
@@ -127,51 +139,67 @@ export default function HomeScreen({ history, allergens, onStartScan, onViewResu
 
       {/* Tip */}
       <View style={styles.tip}>
-        <Text style={styles.tipLabel}>⚡ PRO TIP</Text>
+        <Text style={styles.tipEmoji}>💡</Text>
         <Text style={styles.tipText}>
-          Our AI recognises scientific names — "casein", "lactalbumin" and "whey" all trigger Dairy alerts.
+          Our AI recognises scientific names — "casein" and "whey" both trigger Dairy alerts.
         </Text>
       </View>
+
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:              { flex: 1, backgroundColor: '#f8fafc' },
-  content:                { padding: 20, paddingBottom: 40 },
-  greeting:               { fontSize: 14, fontWeight: '600', color: '#64748b', marginBottom: 2 },
-  headline:               { fontSize: 22, fontWeight: '800', color: '#1e293b', marginBottom: 16 },
-  heroCta:                { borderRadius: 24, padding: 20, marginBottom: 16, backgroundColor: '#4338ca', overflow: 'hidden' },
-  heroLabel:              { fontSize: 10, fontWeight: '800', color: '#a5b4fc', letterSpacing: 1.5, marginBottom: 6 },
-  heroTitle:              { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  heroSubtitle:           { fontSize: 13, color: '#c7d2fe', marginBottom: 14 },
-  heroBtn:                { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  heroBtnText:            { color: '#fff', fontWeight: '700', fontSize: 14 },
-  statsGrid:              { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  statCard:               { width: '47%', borderRadius: 18, padding: 16 },
-  statIcon:               { fontSize: 22, marginBottom: 8 },
-  statValue:              { fontSize: 28, fontWeight: '900' },
-  statLabel:              { fontSize: 11, fontWeight: '700', marginTop: 2, opacity: 0.7 },
-  card:                   { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  cardHeader:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardTitle:              { fontSize: 10, fontWeight: '800', color: '#94a3b8', letterSpacing: 1 },
-  cardAction:             { fontSize: 12, fontWeight: '700', color: '#7c3aed' },
-  emptyAllergens:         { borderWidth: 2, borderStyle: 'dashed', borderColor: '#e2e8f0', borderRadius: 12, padding: 16, alignItems: 'center' },
-  emptyAllergensText:     { fontSize: 13, fontWeight: '600', color: '#94a3b8' },
-  allergenChips:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip:                   { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  chipText:               { fontSize: 12, fontWeight: '700' },
+  container:              { flex: 1, backgroundColor: '#f1f5f9' },
+  content:                { padding: 20, paddingTop: 56, paddingBottom: 40 },
+
+  header:                 { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  greeting:               { fontSize: 13, fontWeight: '500', color: '#94a3b8', marginBottom: 2 },
+  headline:               { fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 },
+  shieldBadge:            { width: 46, height: 46, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  shieldEmoji:            { fontSize: 24 },
+
+  summaryPill:            { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, marginBottom: 16, gap: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  summaryText:            { fontSize: 13, fontWeight: '600', color: '#475569' },
+  summaryDivider:         { width: 1, height: 14, backgroundColor: '#e2e8f0' },
+
+  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, overflow: 'hidden', backgroundColor: '#312e81' },
+  heroContent:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  heroEyebrow:            { fontSize: 10, fontWeight: '800', color: '#818cf8', letterSpacing: 1.5, marginBottom: 6 },
+  heroTitle:              { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
+  heroSubtitle:           { fontSize: 13, color: '#a5b4fc', lineHeight: 18 },
+  heroIconCircle:         { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  heroIcon:               { fontSize: 28 },
+  heroPillBtn:            { alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
+  heroPillText:           { color: '#312e81', fontWeight: '700', fontSize: 14 },
+
+  card:                   { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  cardHeader:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  cardTitle:              { fontSize: 15, fontWeight: '700', color: '#0f172a' },
+  cardSubtitle:           { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  editBtn:                { backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
+  editBtnText:            { fontSize: 12, fontWeight: '700', color: '#7c3aed' },
+
+  emptyState:             { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#e2e8f0', borderRadius: 14, padding: 16, justifyContent: 'center' },
+  emptyStateIcon:         { fontSize: 18 },
+  emptyStateText:         { fontSize: 14, fontWeight: '600', color: '#94a3b8' },
+
+  chipGrid:               { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip:                   { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 22, paddingHorizontal: 12, paddingVertical: 7 },
+  chipEmoji:              { fontSize: 14 },
+  chipText:               { fontSize: 13, fontWeight: '700' },
+
+  ratingPill:             { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
+  ratingPillText:         { fontSize: 12, fontWeight: '700' },
   recentRow:              { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  recentImage:            { width: 52, height: 52, borderRadius: 12 },
-  recentImagePlaceholder: { width: 52, height: 52, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-  recentImageEmoji:       { fontSize: 24 },
+  recentImage:            { width: 56, height: 56, borderRadius: 14 },
+  recentImagePlaceholder: { width: 56, height: 56, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
   recentInfo:             { flex: 1 },
-  badge:                  { alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 4 },
-  badgeText:              { fontSize: 11, fontWeight: '700' },
-  recentName:             { fontSize: 14, fontWeight: '700', color: '#1e293b' },
-  recentDate:             { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  recentName:             { fontSize: 14, fontWeight: '700', color: '#0f172a', lineHeight: 20 },
+  recentAllergens:        { fontSize: 12, color: '#ef4444', fontWeight: '600', marginTop: 3 },
   chevron:                { fontSize: 22, color: '#cbd5e1' },
-  tip:                    { backgroundColor: '#f0fdf4', borderRadius: 16, padding: 16 },
-  tipLabel:               { fontSize: 10, fontWeight: '800', color: '#059669', letterSpacing: 1, marginBottom: 6 },
-  tipText:                { fontSize: 13, color: '#166534', lineHeight: 20 },
+
+  tip:                    { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#7c3aed' },
+  tipEmoji:               { fontSize: 16, marginTop: 1 },
+  tipText:                { flex: 1, fontSize: 13, color: '#475569', lineHeight: 20 },
 });

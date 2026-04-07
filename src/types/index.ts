@@ -36,7 +36,8 @@ export interface ScanResult {
   traceAllergens: TraceAllergen[];
   originalLanguage: string;
   translation?: string;
-  safetyRating: 'safe' | 'warning' | 'danger';
+  ingredientsVisible?: boolean;
+  safetyRating: 'safe' | 'warning' | 'danger' | 'unknown';
   nutritionalInfo?: NutritionalInfo;
   timestamp: number;
 }

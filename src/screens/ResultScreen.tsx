@@ -1,6 +1,42 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { ScanResult, Allergen } from '../types';
+import { ScanResult, Allergen, DetectedAllergen } from '../types';
+
+function highlightIngredients(ingredients: string[], detected: DetectedAllergen[]) {
+  const allergenIngredients = detected.map(d => d.ingredient.toLowerCase());
+  const fullText = ingredients.join(', ');
+  const parts: { text: string; highlight: boolean }[] = [];
+  let remaining = fullText;
+
+  while (remaining.length > 0) {
+    let earliestIndex = -1;
+    let earliestWord = '';
+    for (const word of allergenIngredients) {
+      const idx = remaining.toLowerCase().indexOf(word);
+      if (idx !== -1 && (earliestIndex === -1 || idx < earliestIndex)) {
+        earliestIndex = idx;
+        earliestWord = word;
+      }
+    }
+    if (earliestIndex === -1) {
+      parts.push({ text: remaining, highlight: false });
+      break;
+    }
+    if (earliestIndex > 0) parts.push({ text: remaining.slice(0, earliestIndex), highlight: false });
+    parts.push({ text: remaining.slice(earliestIndex, earliestIndex + earliestWord.length), highlight: true });
+    remaining = remaining.slice(earliestIndex + earliestWord.length);
+  }
+
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.highlight
+          ? <Text key={i} style={{ backgroundColor: '#fef08a', color: '#713f12', fontWeight: '700' }}>{p.text}</Text>
+          : <Text key={i}>{p.text}</Text>
+      )}
+    </>
+  );
+}
 
 interface Props {
   result: ScanResult;
@@ -9,9 +45,10 @@ interface Props {
 }
 
 const RATING_CONFIG = {
-  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'All Clear',         emoji: '✅' },
-  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',   emoji: '⚠️' },
-  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Allergens Detected', emoji: '🚨' },
+  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'All Clear',            emoji: '✅' },
+  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',      emoji: '⚠️' },
+  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Allergens Detected',   emoji: '🚨' },
+  unknown: { bg: '#f8fafc', border: '#cbd5e1', text: '#475569', label: 'Ingredients Not Found', emoji: '🔍' },
 };
 
 export default function ResultScreen({ result, allergens, onScanAgain }: Props) {
@@ -24,7 +61,9 @@ export default function ResultScreen({ result, allergens, onScanAgain }: Props) 
     t.allergens.some(a => enabledNames.includes(a.toLowerCase()))
   );
 
-  const rating = filtered.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
+  const rating = result.ingredientsVisible === false
+    ? 'unknown'
+    : filtered.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
   const cfg = RATING_CONFIG[rating];
 
   return (
@@ -34,6 +73,15 @@ export default function ResultScreen({ result, allergens, onScanAgain }: Props) 
         <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
         {result.productName && <Text style={styles.productName}>{result.productName}</Text>}
       </View>
+
+      {rating === 'unknown' && (
+        <View style={styles.unknownBox}>
+          <Text style={styles.unknownTitle}>No ingredient list detected</Text>
+          <Text style={styles.unknownText}>
+            The photo doesn't show an ingredient list. Please scan the back or side of the packaging where ingredients are listed.
+          </Text>
+        </View>
+      )}
 
       {filtered.length > 0 && (
         <View style={styles.section}>
@@ -62,7 +110,9 @@ export default function ResultScreen({ result, allergens, onScanAgain }: Props) 
       {result.ingredients.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ingredients</Text>
-          <Text style={styles.ingredients}>{result.ingredients.join(', ')}</Text>
+          <Text style={styles.ingredients}>
+            {highlightIngredients(result.ingredients, filtered)}
+          </Text>
         </View>
       )}
 
@@ -89,6 +139,9 @@ const styles = StyleSheet.create({
   traceRow:           { borderLeftWidth: 3, borderLeftColor: '#f59e0b', paddingLeft: 12, marginBottom: 8 },
   traceWarning:       { fontSize: 13, color: '#92400e' },
   ingredients:        { fontSize: 13, color: '#475569', lineHeight: 20 },
+  unknownBox:         { backgroundColor: '#fef9c3', borderRadius: 14, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#eab308' },
+  unknownTitle:       { fontSize: 14, fontWeight: '700', color: '#713f12', marginBottom: 6 },
+  unknownText:        { fontSize: 13, color: '#854d0e', lineHeight: 20 },
   scanAgainBtn:       { backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   scanAgainText:      { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
