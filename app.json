@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "allergen-reader-ios",
+    "name": "AllergenSafe",
     "slug": "allergen-reader-ios",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,21 +10,26 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1e1b4b"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.allergensafe.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "AllergenSafe needs camera access to scan food labels.",
+        "NSPhotoLibraryUsageDescription": "AllergenSafe needs photo access to analyse food labels from your library."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1e1b4b"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "permissions": ["android.permission.CAMERA"]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "AllergenSafe needs camera access to scan food labels." }],
+      ["expo-image-picker", { "photosPermission": "AllergenSafe needs photo access to analyse food labels." }]
+    ]
   }
 }
