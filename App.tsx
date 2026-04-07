@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+const navigationRef = createNavigationContainerRef<any>();
+
+function navigate(name: string) {
+  if (navigationRef.isReady()) navigationRef.navigate(name);
+}
 
 import LoginScreen from './src/screens/LoginScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -101,11 +107,13 @@ export default function App() {
     historyApi.add(item).catch(() => {});
     setCurrentResult(result);
     setScanTab('result');
+    navigate('Scan');
   };
 
   const handleViewHistoryItem = (item: HistoryItem) => {
     setCurrentResult(item);
     setScanTab('result');
+    navigate('Scan');
   };
 
   const handleClearHistory = () => {
@@ -125,7 +133,7 @@ export default function App() {
   if (showOnboarding) return <OnboardingScreen onComplete={handleOnboardingComplete} />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#7c3aed', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
 
         <Tab.Screen name="Home" options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏠</Text> }}>

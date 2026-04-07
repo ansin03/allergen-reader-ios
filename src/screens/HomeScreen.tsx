@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Allergen, HistoryItem } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
 
@@ -25,6 +26,7 @@ const RATING_BADGE: Record<string, { label: string; bg: string; color: string }>
 };
 
 export default function HomeScreen({ history, allergens, onStartScan, onViewResult, onGoToSettings }: Props) {
+  const navigation = useNavigation<any>();
   const active  = allergens.filter(a => a.enabled);
   const safe    = history.filter(h => h.safetyRating === 'safe').length;
   const warning = history.filter(h => h.safetyRating === 'warning').length;
@@ -49,7 +51,7 @@ export default function HomeScreen({ history, allergens, onStartScan, onViewResu
       </Text>
 
       {/* Hero CTA */}
-      <TouchableOpacity style={styles.heroCta} onPress={onStartScan}>
+      <TouchableOpacity style={styles.heroCta} onPress={() => { onStartScan(); navigation.navigate('Scan'); }}>
         <Text style={styles.heroLabel}>AI-POWERED SCANNER</Text>
         <Text style={styles.heroTitle}>Scan an Ingredient Label</Text>
         <Text style={styles.heroSubtitle}>Take a photo or upload any food image</Text>
