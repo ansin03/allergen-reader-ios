@@ -37,12 +37,20 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   const takePicture = async () => {
     if (!cameraRef.current) { Alert.alert('Error', 'Camera not ready'); return; }
     try {
-      // Take photo BEFORE closing camera
-      const photo = await cameraRef.current.takePictureAsync({ base64: false, quality: 0.7 });
-      setCameraActive(false);
-      if (!photo?.uri) { Alert.alert('Error', 'No photo captured'); return; }
-      const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
-      await analyzeImage(base64, photo.uri);
+      setLoading(true);
+      await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        onPictureSaved: async (photo: any) => {
+          setCameraActive(false);
+          try {
+            const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
+            await analyzeImage(base64, photo.uri);
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : String(err));
+            setLoading(false);
+          }
+        },
+      });
     } catch (err) {
       Alert.alert('Camera Error', err instanceof Error ? err.message : String(err));
       setCameraActive(false);
