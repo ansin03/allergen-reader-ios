@@ -3,8 +3,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   Image, Alert, ScrollView,
 } from 'react-native';
-import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { Allergen, ScanResult } from '../types';
 import { analyzeApi, historyApi } from '../services/api';
 
@@ -37,21 +38,22 @@ export default function ScanScreen({ allergens, onResult }: Props) {
 
   const takePicture = async () => {
     if (!cameraRef.current) return;
-    const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.8 });
-    if (photo.base64) {
-      setCameraActive(false);
-      analyzeImage(photo.base64, photo.uri);
-    }
+    const photo = await cameraRef.current.takePictureAsync({ base64: false, quality: 0.8 });
+    if (!photo?.uri) return;
+    setCameraActive(false);
+    const base64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 });
+    analyzeImage(base64, photo.uri);
   };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      base64: true,
+      mediaTypes: ['images'],
+      base64: false,
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0].base64) {
-      analyzeImage(result.assets[0].base64, result.assets[0].uri);
+    if (!result.canceled && result.assets[0].uri) {
+      const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
+      analyzeImage(base64, result.assets[0].uri);
     }
   };
 
@@ -75,7 +77,7 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   if (cameraActive) {
     return (
       <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={styles.camera} facing={'back' as CameraType}>
+        <CameraView ref={cameraRef} style={styles.camera} facing="back">
           <View style={styles.cameraOverlay}>
             <View style={styles.scanFrame} />
             <Text style={styles.cameraHint}>Point at an ingredient label</Text>
