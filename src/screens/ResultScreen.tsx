@@ -69,13 +69,18 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
   const cfg = RATING_CONFIG[rating];
 
   if (rating === 'unknown') {
+    const unknownConfig = {
+      blurry:     { emoji: '📷', title: 'Photo Too Blurry', text: 'The image is not clear enough to safely read the ingredient list. Please retake a sharp, in-focus photo.' },
+      incomplete: { emoji: '✂️', title: 'Ingredient List Cut Off', text: 'The ingredient list appears to be cut off or partially visible. Please retake to capture the full list.' },
+      not_found:  { emoji: '🔍', title: 'No Ingredient List Found', text: 'The photo doesn\'t show an ingredient list. Please scan the back or side of the packaging where ingredients are listed.' },
+    };
+    const issue = result.imageIssue ?? 'not_found';
+    const uc = unknownConfig[issue] ?? unknownConfig['not_found'];
     return (
       <View style={styles.unknownContainer}>
-        <Text style={styles.unknownEmoji}>🔍</Text>
-        <Text style={styles.unknownTitle}>No Ingredient List Found</Text>
-        <Text style={styles.unknownText}>
-          The photo doesn't show an ingredient list. Please scan the back or side of the packaging where ingredients are listed.
-        </Text>
+        <Text style={styles.unknownEmoji}>{uc.emoji}</Text>
+        <Text style={styles.unknownTitle}>{uc.title}</Text>
+        <Text style={styles.unknownText}>{uc.text}</Text>
         <TouchableOpacity style={styles.scanAgainBtn} onPress={onScanAgain}>
           <Text style={styles.scanAgainText}>Try Again</Text>
         </TouchableOpacity>

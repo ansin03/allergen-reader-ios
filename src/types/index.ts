@@ -37,6 +37,7 @@ export interface ScanResult {
   originalLanguage: string;
   translation?: string;
   ingredientsVisible?: boolean;
+  imageIssue?: 'blurry' | 'incomplete' | 'not_found' | null;
   safetyRating: 'safe' | 'warning' | 'danger' | 'unknown';
   nutritionalInfo?: NutritionalInfo;
   timestamp: number;
