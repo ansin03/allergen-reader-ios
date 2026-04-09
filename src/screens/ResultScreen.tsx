@@ -56,16 +56,35 @@ const RATING_CONFIG = {
 export default function ResultScreen({ result, allergens, imageUri, onScanAgain }: Props) {
   const enabledNames = allergens.filter(a => a.enabled).map(a => a.name.toLowerCase());
 
+  // AI-detected allergens that match enabled list
   const filtered = result.detectedAllergens.filter(d =>
     d.matchedAllergens.some(m => enabledNames.includes(m.toLowerCase()))
   );
+
+  // Client-side fallback: scan ingredients for any enabled allergen the AI may have missed
+  const missedByAi: DetectedAllergen[] = [];
+  const alreadyCaught = new Set(filtered.map(d => d.ingredient.toLowerCase()));
+  for (const allergenName of enabledNames) {
+    for (const ingredient of result.ingredients) {
+      if (ingredient.toLowerCase().includes(allergenName) && !alreadyCaught.has(ingredient.toLowerCase())) {
+        missedByAi.push({
+          ingredient,
+          matchedAllergens: [allergens.find(a => a.name.toLowerCase() === allergenName)?.name ?? allergenName],
+          explanation: `Contains "${allergenName}" (detected by ingredient scan)`,
+        });
+        alreadyCaught.add(ingredient.toLowerCase());
+      }
+    }
+  }
+  const allDetected = [...filtered, ...missedByAi];
+
   const filteredTrace = result.traceAllergens.filter(t =>
     t.allergens.some(a => enabledNames.includes(a.toLowerCase()))
   );
 
   const rating = result.ingredientsVisible === false
     ? 'unknown'
-    : filtered.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
+    : allDetected.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
   const cfg = RATING_CONFIG[rating];
 
   if (rating === 'unknown') {
@@ -99,10 +118,10 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
         </View>
       )}
 
-      {filtered.length > 0 && (
+      {allDetected.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Allergens Found</Text>
-          {filtered.map((d, i) => (
+          {allDetected.map((d, i) => (
             <View key={i} style={styles.allergenRow}>
               <Text style={styles.allergenIngredient}>{d.ingredient}</Text>
               <Text style={styles.allergenMatches}>{d.matchedAllergens.join(', ')}</Text>
@@ -127,7 +146,7 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ingredients</Text>
           <Text style={styles.ingredients}>
-            {highlightIngredients(result.ingredients, filtered)}
+            {highlightIngredients(result.ingredients, allDetected)}
           </Text>
         </View>
       )}
