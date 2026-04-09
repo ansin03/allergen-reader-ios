@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { ScanResult, Allergen, DetectedAllergen } from '../types';
+
 
 function highlightIngredients(ingredients: string[], detected: DetectedAllergen[]) {
   const allergenIngredients = detected.map(d => d.ingredient.toLowerCase());
@@ -41,6 +42,7 @@ function highlightIngredients(ingredients: string[], detected: DetectedAllergen[
 interface Props {
   result: ScanResult;
   allergens: Allergen[];
+  imageUri?: string;
   onScanAgain: () => void;
 }
 
@@ -51,7 +53,7 @@ const RATING_CONFIG = {
   unknown: { bg: '#f8fafc', border: '#cbd5e1', text: '#475569', label: 'Ingredients Not Found', emoji: '🔍' },
 };
 
-export default function ResultScreen({ result, allergens, onScanAgain }: Props) {
+export default function ResultScreen({ result, allergens, imageUri, onScanAgain }: Props) {
   const enabledNames = allergens.filter(a => a.enabled).map(a => a.name.toLowerCase());
 
   const filtered = result.detectedAllergens.filter(d =>
@@ -66,20 +68,29 @@ export default function ResultScreen({ result, allergens, onScanAgain }: Props) 
     : filtered.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
   const cfg = RATING_CONFIG[rating];
 
+  if (rating === 'unknown') {
+    return (
+      <View style={styles.unknownContainer}>
+        <Text style={styles.unknownEmoji}>🔍</Text>
+        <Text style={styles.unknownTitle}>No Ingredient List Found</Text>
+        <Text style={styles.unknownText}>
+          The photo doesn't show an ingredient list. Please scan the back or side of the packaging where ingredients are listed.
+        </Text>
+        <TouchableOpacity style={styles.scanAgainBtn} onPress={onScanAgain}>
+          <Text style={styles.scanAgainText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={[styles.ratingCard, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
-        <Text style={styles.ratingEmoji}>{cfg.emoji}</Text>
-        <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
-        {result.productName && <Text style={styles.productName}>{result.productName}</Text>}
-      </View>
-
-      {rating === 'unknown' && (
-        <View style={styles.unknownBox}>
-          <Text style={styles.unknownTitle}>No ingredient list detected</Text>
-          <Text style={styles.unknownText}>
-            The photo doesn't show an ingredient list. Please scan the back or side of the packaging where ingredients are listed.
-          </Text>
+      {rating !== 'unknown' && (
+        <View style={[styles.ratingCard, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
+          {imageUri && <Image source={{ uri: imageUri }} style={styles.scannedImage} />}
+          <Text style={styles.ratingEmoji}>{cfg.emoji}</Text>
+          <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
+          {result.productName && <Text style={styles.productName}>{result.productName}</Text>}
         </View>
       )}
 
@@ -126,7 +137,8 @@ export default function ResultScreen({ result, allergens, onScanAgain }: Props) 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: '#f8fafc' },
   content:            { padding: 20, paddingBottom: 40 },
-  ratingCard:         { borderWidth: 2, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 20 },
+  ratingCard:         { borderWidth: 2, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 20, overflow: 'hidden' },
+  scannedImage:       { width: '100%', height: 160, borderRadius: 12, marginBottom: 16, resizeMode: 'cover' },
   ratingEmoji:        { fontSize: 48, marginBottom: 8 },
   ratingLabel:        { fontSize: 22, fontWeight: '800', marginBottom: 4 },
   productName:        { fontSize: 14, color: '#64748b', fontWeight: '600' },
@@ -139,9 +151,10 @@ const styles = StyleSheet.create({
   traceRow:           { borderLeftWidth: 3, borderLeftColor: '#f59e0b', paddingLeft: 12, marginBottom: 8 },
   traceWarning:       { fontSize: 13, color: '#92400e' },
   ingredients:        { fontSize: 13, color: '#475569', lineHeight: 20 },
-  unknownBox:         { backgroundColor: '#fef9c3', borderRadius: 14, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#eab308' },
-  unknownTitle:       { fontSize: 14, fontWeight: '700', color: '#713f12', marginBottom: 6 },
-  unknownText:        { fontSize: 13, color: '#854d0e', lineHeight: 20 },
+  unknownContainer:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 36, backgroundColor: '#f8fafc' },
+  unknownEmoji:       { fontSize: 64, marginBottom: 20 },
+  unknownTitle:       { fontSize: 22, fontWeight: '800', color: '#1e293b', textAlign: 'center', marginBottom: 12 },
+  unknownText:        { fontSize: 15, color: '#64748b', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
   scanAgainBtn:       { backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   scanAgainText:      { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

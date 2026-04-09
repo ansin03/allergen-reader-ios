@@ -36,6 +36,10 @@ export const authApi = {
     request<AuthResponse>('/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
   onboard: () =>
     request<{ ok: boolean }>('/auth/onboard', { method: 'POST' }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (email: string, otp: string, newPassword: string) =>
+    request<{ ok: boolean }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, otp, newPassword }) }),
 };
 
 // ── Analyze ────────────────────────────────────────────────────────────────────

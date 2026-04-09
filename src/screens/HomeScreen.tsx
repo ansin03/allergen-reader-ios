@@ -7,6 +7,7 @@ import { SEVERITY_CONFIG } from '../constants';
 interface Props {
   history: HistoryItem[];
   allergens: Allergen[];
+  userName?: string;
   onStartScan: () => void;
   onViewResult: (item: HistoryItem) => void;
   onGoToSettings: () => void;
@@ -23,9 +24,10 @@ const RATING_BADGE: Record<string, { label: string; bg: string; color: string }>
   safe:    { label: '✓ Safe',    bg: '#dcfce7', color: '#166534' },
   warning: { label: '⚡ Caution', bg: '#fef9c3', color: '#854d0e' },
   danger:  { label: '⚠ Danger',  bg: '#fee2e2', color: '#991b1b' },
+  unknown: { label: '🔍 Unknown', bg: '#f1f5f9', color: '#475569' },
 };
 
-export default function HomeScreen({ history, allergens, onStartScan, onViewResult, onGoToSettings }: Props) {
+export default function HomeScreen({ history, allergens, userName, onStartScan, onViewResult, onGoToSettings }: Props) {
   const navigation = useNavigation<any>();
   const active = allergens.filter(a => a.enabled);
   const recent = history[0];
@@ -37,7 +39,7 @@ export default function HomeScreen({ history, allergens, onStartScan, onViewResu
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>{greeting()}</Text>
-          <Text style={styles.headline}>AllergenSafe</Text>
+          <Text style={styles.headline}>{userName ? userName : 'Welcome'}</Text>
         </View>
         <View style={styles.shieldBadge}>
           <Text style={styles.shieldEmoji}>🛡️</Text>
@@ -52,7 +54,7 @@ export default function HomeScreen({ history, allergens, onStartScan, onViewResu
         activeOpacity={0.92}
       >
         <View style={styles.heroContent}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.heroEyebrow}>AI-POWERED</Text>
             <Text style={styles.heroTitle}>Scan a Label</Text>
             <Text style={styles.heroSubtitle}>Photo or upload — results in seconds</Text>
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   summaryText:            { fontSize: 13, fontWeight: '600', color: '#475569' },
   summaryDivider:         { width: 1, height: 14, backgroundColor: '#e2e8f0' },
 
-  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, overflow: 'hidden', backgroundColor: '#312e81' },
+  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, backgroundColor: '#312e81' },
   heroContent:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   heroEyebrow:            { fontSize: 10, fontWeight: '800', color: '#818cf8', letterSpacing: 1.5, marginBottom: 6 },
   heroTitle:              { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },

@@ -31,7 +31,19 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     }
   };
 
+  const warnIfNoAllergens = () =>
+    activeNames.length === 0
+      ? new Promise<boolean>(resolve =>
+          Alert.alert(
+            'No allergens enabled',
+            'You have no allergens turned on. Results may not flag anything. Continue anyway?',
+            [{ text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+             { text: 'Continue', onPress: () => resolve(true) }],
+          ))
+      : Promise.resolve(true);
+
   const takePhoto = async () => {
+    if (!await warnIfNoAllergens()) return;
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) { Alert.alert('Camera permission required'); return; }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false });
@@ -41,6 +53,7 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   };
 
   const pickImage = async () => {
+    if (!await warnIfNoAllergens()) return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (!result.canceled && result.assets[0]?.uri) {
       analyzeImage(result.assets[0].uri);

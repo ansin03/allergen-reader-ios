@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { HistoryItem } from '../types';
 
 interface Props {
@@ -32,6 +33,7 @@ const RATING_BADGE: Record<string, { label: string; bg: string; color: string }>
   safe:    { label: '✓ Safe',    bg: '#d1fae5', color: '#065f46' },
   warning: { label: '⚡ Caution', bg: '#fef3c7', color: '#92400e' },
   danger:  { label: '⚠ Danger',  bg: '#fee2e2', color: '#991b1b' },
+  unknown: { label: '🔍 Unknown', bg: '#f1f5f9', color: '#475569' },
 };
 
 function formatDate(ts: number) {
@@ -47,6 +49,7 @@ function formatDate(ts: number) {
 }
 
 export default function HistoryScreen({ history, onViewItem, onClearHistory, onStartScan }: Props) {
+  const navigation = useNavigation<any>();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   const filtered = activeFilter === 'all' ? history : history.filter(h => h.safetyRating === activeFilter);
@@ -92,7 +95,7 @@ export default function HistoryScreen({ history, onViewItem, onClearHistory, onS
           <Text style={styles.emptyIcon}>🕐</Text>
           <Text style={styles.emptyTitle}>No scans yet</Text>
           <Text style={styles.emptySubtitle}>Your scan history will appear here after your first scan.</Text>
-          <TouchableOpacity style={styles.startScanBtn} onPress={onStartScan}>
+          <TouchableOpacity style={styles.startScanBtn} onPress={() => { onStartScan(); navigation.navigate('Scan'); }}>
             <Text style={styles.startScanText}>📷  Start your first scan</Text>
           </TouchableOpacity>
         </View>

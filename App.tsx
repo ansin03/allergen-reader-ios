@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -32,8 +32,9 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [allergens,      setAllergens]      = useState<Allergen[]>(DEFAULT_ALLERGENS);
   const [history,        setHistory]        = useState<HistoryItem[]>([]);
-  const [currentResult,  setCurrentResult]  = useState<ScanResult | null>(null);
-  const [scanTab,        setScanTab]        = useState<'scan' | 'result'>('scan');
+  const [currentResult,   setCurrentResult]   = useState<ScanResult | null>(null);
+  const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(undefined);
+  const [scanTab,         setScanTab]         = useState<'scan' | 'result'>('scan');
 
   // Restore session on launch
   useEffect(() => {
@@ -96,22 +97,27 @@ export default function App() {
   const handleToggle  = (id: string) =>
     setAllergens(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
   const handleAdd = (name: string, severity: AllergenSeverity) => {
-    if (allergens.some(a => a.name.toLowerCase() === name.toLowerCase())) return;
+    if (allergens.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+      Alert.alert('Already exists', `"${name}" is already in your allergen list.`);
+      return;
+    }
     setAllergens(prev => [...prev, { id: Date.now().toString(), name, enabled: true, severity, emoji: '⚠️' }]);
   };
   const handleRemove = (id: string) => setAllergens(prev => prev.filter(a => a.id !== id));
 
-  const handleResult = (result: ScanResult) => {
-    const item: HistoryItem = { ...result, id: Date.now().toString(), profileId: 'default' };
+  const handleResult = (result: ScanResult, imageUri?: string) => {
+    const item: HistoryItem = { ...result, id: Date.now().toString(), profileId: 'default', imageUrl: imageUri };
     setHistory(prev => [item, ...prev].slice(0, 50));
     historyApi.add(item).catch(() => {});
     setCurrentResult(result);
+    setCurrentImageUri(imageUri);
     setScanTab('result');
     navigate('Scan');
   };
 
   const handleViewHistoryItem = (item: HistoryItem) => {
     setCurrentResult(item);
+    setCurrentImageUri(item.imageUrl);
     setScanTab('result');
     navigate('Scan');
   };
@@ -141,6 +147,7 @@ export default function App() {
             <HomeScreen
               history={history}
               allergens={allergens}
+              userName={user?.name}
               onStartScan={() => { setScanTab('scan'); }}
               onViewResult={handleViewHistoryItem}
               onGoToSettings={() => {}}
@@ -151,7 +158,7 @@ export default function App() {
         <Tab.Screen name="Scan" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>📷</Text> }}>
           {() =>
             scanTab === 'result' && currentResult
-              ? <ResultScreen result={currentResult} allergens={allergens} onScanAgain={() => { setCurrentResult(null); setScanTab('scan'); }} />
+              ? <ResultScreen result={currentResult} allergens={allergens} imageUri={currentImageUri} onScanAgain={() => { setCurrentResult(null); setCurrentImageUri(undefined); setScanTab('scan'); }} />
               : <ScanScreen allergens={allergens} onResult={handleResult} />
           }
         </Tab.Screen>
