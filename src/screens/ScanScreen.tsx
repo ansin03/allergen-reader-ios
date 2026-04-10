@@ -139,7 +139,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
           <Text style={styles.tipItem}>✓ Text is sharp and readable</Text>
           <Text style={styles.tipItem}>✓ Nothing is cut off at the edges</Text>
         </View>
-        <TouchableOpacity style={styles.confirmBtn} onPress={() => analyzeImage(previewUri)}>
+        <TouchableOpacity style={styles.confirmBtn} onPress={() => analyzeImage(previewUri)} disabled={loading}>
           <Text style={styles.confirmBtnText}>✓  Looks Good — Analyse</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.retakeBtn} onPress={() => setPreviewUri(null)}>
@@ -154,10 +154,10 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Scan a Label</Text>
       <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
-      <TouchableOpacity style={styles.primaryBtn} onPress={takePhoto}>
+      <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.5 }]} onPress={takePhoto} disabled={loading}>
         <Text style={styles.primaryBtnText}>📷  Take Photo</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
+      <TouchableOpacity style={[styles.secondaryBtn, loading && { opacity: 0.5 }]} onPress={pickImage} disabled={loading}>
         <Text style={styles.secondaryBtnText}>🖼️  Upload from Library</Text>
       </TouchableOpacity>
       <View style={styles.hints}>

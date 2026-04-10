@@ -111,8 +111,10 @@ export default function HistoryScreen({ history, onViewItem, onClearHistory, onS
       {/* List */}
       <ScrollView contentContainerStyle={styles.list}>
         {filtered.map(item => {
-          const badge = RATING_BADGE[item.safetyRating];
-          const count = item.detectedAllergens.length;
+          const safetyRating = item.safetyRating in RATING_BADGE ? item.safetyRating : 'unknown';
+          const badge = RATING_BADGE[safetyRating];
+          const detectedAllergens = Array.isArray(item.detectedAllergens) ? item.detectedAllergens : [];
+          const count = detectedAllergens.length;
           return (
             <TouchableOpacity key={item.id} style={styles.item} onPress={() => onViewItem(item)}>
               {item.imageUrl
@@ -126,7 +128,7 @@ export default function HistoryScreen({ history, onViewItem, onClearHistory, onS
                 <Text style={styles.itemName} numberOfLines={1}>
                   {item.productName || (count > 0 ? `${count} allergen${count !== 1 ? 's' : ''} found` : 'No allergens detected')}
                 </Text>
-                <Text style={styles.itemDate}>{formatDate(item.timestamp)}</Text>
+                <Text style={styles.itemDate}>{formatDate(item.timestamp ?? Date.now())}</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>

@@ -123,16 +123,23 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
               : <View style={styles.recentImagePlaceholder}><Text style={{ fontSize: 28 }}>🏷️</Text></View>
             }
             <View style={styles.recentInfo}>
-              <Text style={styles.recentName} numberOfLines={2}>
-                {recent.productName || (recent.detectedAllergens.length > 0
-                  ? `${recent.detectedAllergens.length} allergen${recent.detectedAllergens.length !== 1 ? 's' : ''} detected`
-                  : 'No allergens found')}
-              </Text>
-              {recent.detectedAllergens.length > 0 && (
-                <Text style={styles.recentAllergens} numberOfLines={1}>
-                  {recent.detectedAllergens.map(d => d.matchedAllergens).flat().join(', ')}
-                </Text>
-              )}
+              {(() => {
+                const detected = Array.isArray(recent.detectedAllergens) ? recent.detectedAllergens : [];
+                return (
+                  <>
+                    <Text style={styles.recentName} numberOfLines={2}>
+                      {recent.productName || (detected.length > 0
+                        ? `${detected.length} allergen${detected.length !== 1 ? 's' : ''} detected`
+                        : 'No allergens found')}
+                    </Text>
+                    {detected.length > 0 && (
+                      <Text style={styles.recentAllergens} numberOfLines={1}>
+                        {detected.map(d => Array.isArray(d.matchedAllergens) ? d.matchedAllergens : []).flat().join(', ')}
+                      </Text>
+                    )}
+                  </>
+                );
+              })()}
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
