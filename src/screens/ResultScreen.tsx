@@ -53,26 +53,39 @@ const RATING_CONFIG = {
   unknown: { bg: '#f8fafc', border: '#cbd5e1', text: '#475569', label: 'Ingredients Not Found', emoji: '🔍' },
 };
 
-export default function ResultScreen({ result, allergens, imageUri, onScanAgain }: Props) {
-  const enabledNames = allergens.filter(a => a.enabled).map(a => a.name.toLowerCase());
+// Returns true if ingredientText contains allergenName as a whole word / phrase,
+// not as part of another word (e.g. "nut" does NOT match "coconut" or "peanut").
+function matchesWholeWord(ingredientText: string, allergenName: string): boolean {
+  const escaped = allergenName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(?<![a-zA-Z])${escaped}(?![a-zA-Z])`, 'i');
+  return regex.test(ingredientText);
+}
 
-  // AI-detected allergens that match enabled list
+export default function ResultScreen({ result, allergens, imageUri, onScanAgain }: Props) {
+  const enabledAllergens = allergens.filter(a => a.enabled);
+  const enabledNames = enabledAllergens.map(a => a.name.toLowerCase());
+
+  // AI-detected allergens that match enabled list (server already normalised names)
   const filtered = result.detectedAllergens.filter(d =>
     d.matchedAllergens.some(m => enabledNames.includes(m.toLowerCase()))
   );
 
-  // Client-side fallback: scan ingredients for any enabled allergen the AI may have missed
+  // Client-side fallback: whole-word scan for enabled allergens the AI may have missed
   const missedByAi: DetectedAllergen[] = [];
   const alreadyCaught = new Set(filtered.map(d => d.ingredient.toLowerCase()));
-  for (const allergenName of enabledNames) {
+  for (const allergen of enabledAllergens) {
     for (const ingredient of result.ingredients) {
-      if (ingredient.toLowerCase().includes(allergenName) && !alreadyCaught.has(ingredient.toLowerCase())) {
+      const ingLower = ingredient.toLowerCase();
+      if (
+        matchesWholeWord(ingredient, allergen.name) &&
+        !alreadyCaught.has(ingLower)
+      ) {
         missedByAi.push({
           ingredient,
-          matchedAllergens: [allergens.find(a => a.name.toLowerCase() === allergenName)?.name ?? allergenName],
-          explanation: `Contains "${allergenName}" (detected by ingredient scan)`,
+          matchedAllergens: [allergen.name],
+          explanation: `Contains "${allergen.name}" (detected by ingredient scan)`,
         });
-        alreadyCaught.add(ingredient.toLowerCase());
+        alreadyCaught.add(ingLower);
       }
     }
   }
@@ -82,9 +95,29 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
     t.allergens.some(a => enabledNames.includes(a.toLowerCase()))
   );
 
+  // Severity-aware safety rating:
+  // — fatal allergen detected directly     → danger
+  // — any allergen detected directly       → danger
+  // — fatal allergen in trace/may-contain  → danger (not just warning — too risky)
+  // — any allergen in trace/may-contain    → warning
+  // — nothing found                        → safe
+  function getSeverity(matchedNames: string[]): string {
+    for (const m of matchedNames) {
+      const allergen = allergens.find(a => a.name.toLowerCase() === m.toLowerCase());
+      if (allergen) return allergen.severity;
+    }
+    return 'mild';
+  }
+
+  const hasFatalTrace = filteredTrace.some(t => getSeverity(t.allergens) === 'fatal');
+
   const rating = result.ingredientsVisible === false
     ? 'unknown'
-    : allDetected.length > 0 ? 'danger' : filteredTrace.length > 0 ? 'warning' : 'safe';
+    : allDetected.length > 0 || hasFatalTrace
+      ? 'danger'
+      : filteredTrace.length > 0
+        ? 'warning'
+        : 'safe';
   const cfg = RATING_CONFIG[rating];
 
   if (rating === 'unknown') {
@@ -121,13 +154,24 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
       {allDetected.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Allergens Found</Text>
-          {allDetected.map((d, i) => (
-            <View key={i} style={styles.allergenRow}>
-              <Text style={styles.allergenIngredient}>{d.ingredient}</Text>
-              <Text style={styles.allergenMatches}>{d.matchedAllergens.join(', ')}</Text>
-              <Text style={styles.allergenExplanation}>{d.explanation}</Text>
-            </View>
-          ))}
+          {allDetected.map((d, i) => {
+            const severity = getSeverity(d.matchedAllergens);
+            const severityStyle = severity === 'fatal'
+              ? { color: '#b91c1c', label: 'FATAL' }
+              : severity === 'intolerance'
+              ? { color: '#c2410c', label: 'INTOLERANCE' }
+              : { color: '#a16207', label: 'MILD' };
+            return (
+              <View key={i} style={styles.allergenRow}>
+                <View style={styles.allergenHeader}>
+                  <Text style={styles.allergenIngredient}>{d.ingredient}</Text>
+                  <Text style={[styles.severityTag, { color: severityStyle.color }]}>{severityStyle.label}</Text>
+                </View>
+                <Text style={styles.allergenMatches}>{d.matchedAllergens.join(', ')}</Text>
+                <Text style={styles.allergenExplanation}>{d.explanation}</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -169,7 +213,9 @@ const styles = StyleSheet.create({
   section:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   sectionTitle:       { fontSize: 16, fontWeight: '700', color: '#1e293b', marginBottom: 12 },
   allergenRow:        { borderLeftWidth: 3, borderLeftColor: '#ef4444', paddingLeft: 12, marginBottom: 12 },
-  allergenIngredient: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
+  allergenHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  allergenIngredient: { fontSize: 14, fontWeight: '700', color: '#1e293b', flex: 1 },
+  severityTag:        { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   allergenMatches:    { fontSize: 12, color: '#ef4444', fontWeight: '600', marginTop: 2 },
   allergenExplanation:{ fontSize: 12, color: '#64748b', marginTop: 2 },
   traceRow:           { borderLeftWidth: 3, borderLeftColor: '#f59e0b', paddingLeft: 12, marginBottom: 8 },
