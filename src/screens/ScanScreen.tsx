@@ -76,12 +76,27 @@ export default function ScanScreen({ allergens, onResult }: Props) {
           ))
       : Promise.resolve(true);
 
+  const MIN_DIMENSION = 640; // minimum width or height in pixels
+
+  const checkResolution = (width: number, height: number): boolean => {
+    if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+      Alert.alert(
+        'Image Too Small',
+        `The image is ${width}×${height}px which is too low resolution to read ingredients reliably. Please take a new photo closer to the label.`,
+      );
+      return false;
+    }
+    return true;
+  };
+
   const takePhoto = async () => {
     if (!await warnIfNoAllergens()) return;
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) { Alert.alert('Camera permission required'); return; }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false });
     if (!result.canceled && result.assets[0]?.uri) {
+      const { width, height } = result.assets[0];
+      if (!checkResolution(width, height)) return;
       setPreviewUri(result.assets[0].uri);
     }
   };
@@ -90,6 +105,8 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     if (!await warnIfNoAllergens()) return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (!result.canceled && result.assets[0]?.uri) {
+      const { width, height } = result.assets[0];
+      if (!checkResolution(width, height)) return;
       setPreviewUri(result.assets[0].uri);
     }
   };
