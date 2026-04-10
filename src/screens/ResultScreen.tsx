@@ -4,37 +4,19 @@ import { ScanResult, Allergen, DetectedAllergen } from '../types';
 
 
 function highlightIngredients(ingredients: string[], detected: DetectedAllergen[]) {
-  const allergenIngredients = detected.map(d => d.ingredient.toLowerCase());
-  const fullText = ingredients.join(', ');
-  const parts: { text: string; highlight: boolean }[] = [];
-  let remaining = fullText;
-
-  while (remaining.length > 0) {
-    let earliestIndex = -1;
-    let earliestWord = '';
-    for (const word of allergenIngredients) {
-      const idx = remaining.toLowerCase().indexOf(word);
-      if (idx !== -1 && (earliestIndex === -1 || idx < earliestIndex)) {
-        earliestIndex = idx;
-        earliestWord = word;
-      }
-    }
-    if (earliestIndex === -1) {
-      parts.push({ text: remaining, highlight: false });
-      break;
-    }
-    if (earliestIndex > 0) parts.push({ text: remaining.slice(0, earliestIndex), highlight: false });
-    parts.push({ text: remaining.slice(earliestIndex, earliestIndex + earliestWord.length), highlight: true });
-    remaining = remaining.slice(earliestIndex + earliestWord.length);
-  }
+  // Only highlight the exact ingredient strings that were matched — not every
+  // occurrence of the allergen name as a substring in unrelated ingredients.
+  const matchedIngredients = new Set(detected.map(d => d.ingredient.toLowerCase().trim()));
 
   return (
     <>
-      {parts.map((p, i) =>
-        p.highlight
-          ? <Text key={i} style={{ backgroundColor: '#fef08a', color: '#713f12', fontWeight: '700' }}>{p.text}</Text>
-          : <Text key={i}>{p.text}</Text>
-      )}
+      {ingredients.map((ingredient, i) => {
+        const isMatch = matchedIngredients.has(ingredient.toLowerCase().trim());
+        const separator = i < ingredients.length - 1 ? ', ' : '';
+        return isMatch
+          ? <Text key={i}><Text style={{ backgroundColor: '#fef08a', color: '#713f12', fontWeight: '700' }}>{ingredient}</Text>{separator}</Text>
+          : <Text key={i}>{ingredient}{separator}</Text>;
+      })}
     </>
   );
 }
@@ -151,9 +133,16 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
         </View>
       )}
 
+      {/* ── Direct allergen matches ── */}
       {allDetected.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Allergens Found</Text>
+        <View style={[styles.section, styles.dangerSection]}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionIcon}>🚨</Text>
+            <View>
+              <Text style={[styles.sectionTitle, { color: '#991b1b' }]}>Contains Your Allergens</Text>
+              <Text style={styles.sectionSubtitle}>These ingredients are directly in this product</Text>
+            </View>
+          </View>
           {allDetected.map((d, i) => {
             const severity = getSeverity(d.matchedAllergens);
             const severityStyle = severity === 'fatal'
@@ -175,11 +164,19 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
         </View>
       )}
 
+      {/* ── Cross-contamination warnings ── */}
       {filteredTrace.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cross-Contamination Warnings</Text>
+        <View style={[styles.section, styles.warningSection]}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionIcon}>⚠️</Text>
+            <View>
+              <Text style={[styles.sectionTitle, { color: '#92400e' }]}>Cross-Contamination Risk</Text>
+              <Text style={styles.sectionSubtitle}>Not an ingredient, but produced near your allergens</Text>
+            </View>
+          </View>
           {filteredTrace.map((t, i) => (
             <View key={i} style={styles.traceRow}>
+              <Text style={styles.traceAllergens}>{t.allergens.join(', ')}</Text>
               <Text style={styles.traceWarning}>{t.warning}</Text>
             </View>
           ))}
@@ -211,7 +208,12 @@ const styles = StyleSheet.create({
   ratingLabel:        { fontSize: 22, fontWeight: '800', marginBottom: 4 },
   productName:        { fontSize: 14, color: '#64748b', fontWeight: '600' },
   section:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  sectionTitle:       { fontSize: 16, fontWeight: '700', color: '#1e293b', marginBottom: 12 },
+  dangerSection:      { backgroundColor: '#fff1f2', borderWidth: 1, borderColor: '#fca5a5' },
+  warningSection:     { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fcd34d' },
+  sectionHeaderRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
+  sectionIcon:        { fontSize: 22, marginTop: 1 },
+  sectionTitle:       { fontSize: 15, fontWeight: '700', color: '#1e293b', marginBottom: 2 },
+  sectionSubtitle:    { fontSize: 12, color: '#64748b' },
   allergenRow:        { borderLeftWidth: 3, borderLeftColor: '#ef4444', paddingLeft: 12, marginBottom: 12 },
   allergenHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   allergenIngredient: { fontSize: 14, fontWeight: '700', color: '#1e293b', flex: 1 },
@@ -219,7 +221,8 @@ const styles = StyleSheet.create({
   allergenMatches:    { fontSize: 12, color: '#ef4444', fontWeight: '600', marginTop: 2 },
   allergenExplanation:{ fontSize: 12, color: '#64748b', marginTop: 2 },
   traceRow:           { borderLeftWidth: 3, borderLeftColor: '#f59e0b', paddingLeft: 12, marginBottom: 8 },
-  traceWarning:       { fontSize: 13, color: '#92400e' },
+  traceAllergens:     { fontSize: 12, fontWeight: '700', color: '#92400e', marginBottom: 2 },
+  traceWarning:       { fontSize: 13, color: '#78350f' },
   ingredients:        { fontSize: 13, color: '#475569', lineHeight: 20 },
   unknownContainer:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 36, backgroundColor: '#f8fafc' },
   unknownEmoji:       { fontSize: 64, marginBottom: 20 },
