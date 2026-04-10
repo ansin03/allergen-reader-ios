@@ -11,9 +11,10 @@ import { analyzeApi } from '../services/api';
 interface Props {
   allergens: Allergen[];
   onResult: (result: ScanResult, imageUri?: string) => void;
+  isOnline?: boolean;
 }
 
-export default function ScanScreen({ allergens, onResult }: Props) {
+export default function ScanScreen({ allergens, onResult, isOnline = true }: Props) {
   const [loading,     setLoading]     = useState(false);
   const [previewUri,  setPreviewUri]  = useState<string | null>(null);
 
@@ -90,6 +91,7 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   };
 
   const takePhoto = async () => {
+    if (!isOnline) { Alert.alert('No Connection', 'An internet connection is required to analyse labels.'); return; }
     if (!await warnIfNoAllergens()) return;
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) { Alert.alert('Camera permission required'); return; }
@@ -102,6 +104,7 @@ export default function ScanScreen({ allergens, onResult }: Props) {
   };
 
   const pickImage = async () => {
+    if (!isOnline) { Alert.alert('No Connection', 'An internet connection is required to analyse labels.'); return; }
     if (!await warnIfNoAllergens()) return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (!result.canceled && result.assets[0]?.uri) {

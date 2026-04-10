@@ -23,6 +23,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+// ── Health ─────────────────────────────────────────────────────────────────────
+export const healthApi = {
+  check: () => request<{ ok: boolean; ts: number }>('/health'),
+};
+
 // ── Auth ───────────────────────────────────────────────────────────────────────
 export interface AuthResponse {
   token: string;

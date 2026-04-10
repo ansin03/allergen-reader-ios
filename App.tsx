@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, ActivityIndicator, StyleSheet, Text, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
@@ -27,16 +28,39 @@ interface AuthUser { name: string; email: string; }
 const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [user,           setUser]           = useState<AuthUser | null>(null);
-  const [appReady,       setAppReady]       = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [allergens,      setAllergens]      = useState<Allergen[]>(DEFAULT_ALLERGENS);
-  const [history,        setHistory]        = useState<HistoryItem[]>([]);
-  const [currentResult,   setCurrentResult]   = useState<ScanResult | null>(null);
-  const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(undefined);
-  const [scanTab,         setScanTab]         = useState<'scan' | 'result'>('scan');
+  const [user,            setUser]           = useState<AuthUser | null>(null);
+  const [appReady,        setAppReady]       = useState(false);
+  const [showOnboarding,  setShowOnboarding] = useState(false);
+  const [allergens,       setAllergens]      = useState<Allergen[]>(DEFAULT_ALLERGENS);
+  const [history,         setHistory]        = useState<HistoryItem[]>([]);
+  const [currentResult,   setCurrentResult]  = useState<ScanResult | null>(null);
+  const [currentImageUri, setCurrentImageUri]= useState<string | undefined>(undefined);
+  const [scanTab,         setScanTab]        = useState<'scan' | 'result'>('scan');
+  const [isOnline,        setIsOnline]       = useState(true);
+  const [syncError,       setSyncError]      = useState(false);
 
-  // Restore session on launch
+  // Pending allergen sync retry ref
+  const pendingAllergenSync = useRef<Allergen[] | null>(null);
+
+  // ── Offline detection ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const online = !!state.isConnected && !!state.isInternetReachable;
+      setIsOnline(online);
+      // When coming back online, retry pending allergen sync
+      if (online && pendingAllergenSync.current) {
+        allergensApi.update(pendingAllergenSync.current)
+          .then(() => {
+            pendingAllergenSync.current = null;
+            setSyncError(false);
+          })
+          .catch(() => {}); // still offline or failed — keep pending
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // ── Restore session on launch ────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       const token = await getToken();
@@ -57,10 +81,19 @@ export default function App() {
     })();
   }, []);
 
-  // Sync allergens to server on change
+  // ── Sync allergens to server on change ──────────────────────────────────────
   useEffect(() => {
     if (!user || showOnboarding) return;
-    allergensApi.update(allergens).catch(() => {});
+    allergensApi.update(allergens)
+      .then(() => {
+        setSyncError(false);
+        pendingAllergenSync.current = null;
+      })
+      .catch(() => {
+        // Store for retry when back online
+        pendingAllergenSync.current = allergens;
+        setSyncError(true);
+      });
   }, [allergens]);
 
   const handleAuth = async (name: string, email: string, hasOnboarded: boolean) => {
@@ -92,10 +125,13 @@ export default function App() {
     setAllergens(DEFAULT_ALLERGENS);
     setHistory([]);
     setCurrentResult(null);
+    setSyncError(false);
+    pendingAllergenSync.current = null;
   };
 
-  const handleToggle  = (id: string) =>
+  const handleToggle = (id: string) =>
     setAllergens(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
+
   const handleAdd = (name: string, severity: AllergenSeverity) => {
     if (allergens.some(a => a.name.toLowerCase() === name.toLowerCase())) {
       Alert.alert('Already exists', `"${name}" is already in your allergen list.`);
@@ -103,12 +139,16 @@ export default function App() {
     }
     setAllergens(prev => [...prev, { id: Date.now().toString(), name, enabled: true, severity, emoji: '⚠️' }]);
   };
+
   const handleRemove = (id: string) => setAllergens(prev => prev.filter(a => a.id !== id));
 
   const handleResult = (result: ScanResult, imageUri?: string) => {
     const item: HistoryItem = { ...result, id: Date.now().toString(), profileId: 'default', imageUrl: imageUri };
     setHistory(prev => [item, ...prev].slice(0, 50));
-    historyApi.add(item).catch(() => {});
+    historyApi.add(item).catch(() => {
+      // History item saved locally; server sync failed silently — not critical
+      console.warn('[AllergenSafe] Failed to sync history item to server');
+    });
     setCurrentResult(result);
     setCurrentImageUri(imageUri);
     setScanTab('result');
@@ -124,7 +164,9 @@ export default function App() {
 
   const handleClearHistory = () => {
     setHistory([]);
-    historyApi.clear().catch(() => {});
+    historyApi.clear().catch(() => {
+      console.warn('[AllergenSafe] Failed to clear history on server');
+    });
   };
 
   if (!appReady) {
@@ -140,9 +182,32 @@ export default function App() {
 
   return (
     <NavigationContainer ref={navigationRef}>
+      {/* ── Offline banner ── */}
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>📡  No internet connection — scanning unavailable</Text>
+        </View>
+      )}
+
+      {/* ── Sync error banner ── */}
+      {isOnline && syncError && (
+        <View style={styles.syncErrorBanner}>
+          <Text style={styles.syncErrorText}>⚠️  Allergen changes not saved to server</Text>
+          <TouchableOpacity onPress={() => {
+            if (pendingAllergenSync.current) {
+              allergensApi.update(pendingAllergenSync.current)
+                .then(() => { setSyncError(false); pendingAllergenSync.current = null; })
+                .catch(() => Alert.alert('Sync Failed', 'Could not save allergen changes. Check your connection and try again.'));
+            }
+          }}>
+            <Text style={styles.syncRetryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#7c3aed', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
 
-        <Tab.Screen name="Home" options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏠</Text> }}>
+        <Tab.Screen name="Home" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}>
           {() => (
             <HomeScreen
               history={history}
@@ -159,7 +224,7 @@ export default function App() {
           {() =>
             scanTab === 'result' && currentResult
               ? <ResultScreen result={currentResult} allergens={allergens} imageUri={currentImageUri} onScanAgain={() => { setCurrentResult(null); setCurrentImageUri(undefined); setScanTab('scan'); }} />
-              : <ScanScreen allergens={allergens} onResult={handleResult} />
+              : <ScanScreen allergens={allergens} onResult={handleResult} isOnline={isOnline} />
           }
         </Tab.Screen>
 
@@ -187,5 +252,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e1b4b' },
+  loading:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e1b4b' },
+  offlineBanner:    { backgroundColor: '#1e293b', paddingVertical: 8, paddingHorizontal: 16, alignItems: 'center' },
+  offlineText:      { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
+  syncErrorBanner:  { backgroundColor: '#7c2d12', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  syncErrorText:    { color: '#fed7aa', fontSize: 12, fontWeight: '600', flex: 1 },
+  syncRetryText:    { color: '#fff', fontSize: 12, fontWeight: '800', paddingLeft: 12 },
 });
