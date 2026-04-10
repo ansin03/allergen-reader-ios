@@ -23,6 +23,24 @@ export default function ScanScreen({ allergens, onResult }: Props) {
     setPreviewUri(null);
     setLoading(true);
     try {
+      // Validate file type
+      const extension = uri.split('.').pop()?.toLowerCase();
+      if (!extension || !['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp'].includes(extension)) {
+        Alert.alert('Unsupported File', 'Please use a JPG, PNG, or HEIC image.');
+        return;
+      }
+
+      // Validate file size (max 15MB before base64 expansion)
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      const MAX_BYTES = 15 * 1024 * 1024; // 15MB
+      if (fileInfo.exists && (fileInfo as any).size > MAX_BYTES) {
+        Alert.alert(
+          'Image Too Large',
+          'The image is over 15MB. Please take a new photo at normal camera settings.',
+        );
+        return;
+      }
+
       const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
       const result = await analyzeApi.analyze(base64, activeNames);
 
