@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "AllergenSafe",
-    "slug": "allergen-reader-ios",
+    "name": "EatSurely AI",
+    "slug": "eatsurely-ai",
     "version": "1.0.0",
+    "description": "Food Allergen Scanner",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -10,14 +11,16 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1e1b4b"
+      "backgroundColor": "#1b5e20"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.allergensafe.app",
+      "bundleIdentifier": "com.eatsurely.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "AllergenSafe needs camera access to scan food labels.",
-        "NSPhotoLibraryUsageDescription": "AllergenSafe needs photo access to analyse food labels from your library."
+        "NSCameraUsageDescription": "EatSurely AI needs camera access to scan food ingredient labels.",
+        "NSPhotoLibraryUsageDescription": "EatSurely AI needs photo access to analyze food ingredient labels from your library.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -25,11 +28,31 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e1b4b"
       },
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
-      ["expo-camera", { "cameraPermission": "AllergenSafe needs camera access to scan food labels." }],
-      ["expo-image-picker", { "photosPermission": "AllergenSafe needs photo access to analyse food labels." }]
-    ]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "EatSurely needs camera access to scan food labels."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "EatSurely needs photo access to analyse food labels."
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9fda198d-d3a7-44a3-ae04-e7dbc4a54232"
+      }
+    },
+    "owner": "sedona"
   }
 }

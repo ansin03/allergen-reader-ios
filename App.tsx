@@ -29,6 +29,7 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [user,            setUser]           = useState<AuthUser | null>(null);
+  const [isGuest,         setIsGuest]        = useState(false);
   const [appReady,        setAppReady]       = useState(false);
   const [showOnboarding,  setShowOnboarding] = useState(false);
   const [allergens,       setAllergens]      = useState<Allergen[]>(DEFAULT_ALLERGENS);
@@ -83,7 +84,7 @@ export default function App() {
 
   // ── Sync allergens to server on change ──────────────────────────────────────
   useEffect(() => {
-    if (!user || showOnboarding) return;
+    if (!user || isGuest || showOnboarding) return;
     allergensApi.update(allergens)
       .then(() => {
         setSyncError(false);
@@ -117,16 +118,28 @@ export default function App() {
     setShowOnboarding(false);
   };
 
+  const handleGuest = () => {
+    setIsGuest(true);
+    setShowOnboarding(true);
+    setAppReady(true);
+  };
+
   const handleLogout = async () => {
     await clearToken();
     await AsyncStorage.removeItem('as_user');
     setUser(null);
+    setIsGuest(false);
     setShowOnboarding(false);
     setAllergens(DEFAULT_ALLERGENS);
     setHistory([]);
     setCurrentResult(null);
     setSyncError(false);
     pendingAllergenSync.current = null;
+  };
+
+  const handleDeleteAccount = async () => {
+    await authApi.deleteAccount();
+    await handleLogout();
   };
 
   const handleToggle = (id: string) =>
@@ -147,7 +160,7 @@ export default function App() {
     setHistory(prev => [item, ...prev].slice(0, 50));
     historyApi.add(item).catch(() => {
       // History item saved locally; server sync failed silently — not critical
-      console.warn('[AllergenSafe] Failed to sync history item to server');
+      console.warn('[EatSurely] Failed to sync history item to server');
     });
     setCurrentResult(result);
     setCurrentImageUri(imageUri);
@@ -164,23 +177,22 @@ export default function App() {
 
   const handleClearHistory = () => {
     setHistory([]);
-    historyApi.clear().catch(() => {
-      console.warn('[AllergenSafe] Failed to clear history on server');
-    });
+    if (!isGuest) historyApi.clear().catch(() => {});
   };
 
   if (!appReady) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#7c3aed" />
+        <ActivityIndicator size="large" color="#43a047" />
       </View>
     );
   }
 
-  if (!user) return <LoginScreen onAuth={handleAuth} />;
+  if (!user && !isGuest) return <LoginScreen onAuth={handleAuth} onGuest={handleGuest} />;
   if (showOnboarding) return <OnboardingScreen onComplete={handleOnboardingComplete} />;
 
   return (
+    <ErrorBoundary>
     <NavigationContainer ref={navigationRef}>
       {/* ── Offline banner ── */}
       {!isOnline && (
@@ -205,7 +217,7 @@ export default function App() {
         </View>
       )}
 
-      <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#7c3aed', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
+      <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#43a047', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
 
         <Tab.Screen name="Home" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}>
           {() => (
@@ -242,20 +254,46 @@ export default function App() {
         <Tab.Screen name="Settings" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>⚙️</Text> }}>
           {() => (
             <SettingsScreen allergens={allergens} onToggle={handleToggle}
-              onAdd={handleAdd} onRemove={handleRemove} onLogout={handleLogout} />
+              onAdd={handleAdd} onRemove={handleRemove} onLogout={handleLogout}
+              onDeleteAccount={handleDeleteAccount}
+              isGuest={isGuest}
+              onSignIn={handleLogout} />
           )}
         </Tab.Screen>
 
       </Tab.Navigator>
     </NavigationContainer>
+    </ErrorBoundary>
   );
 }
 
 const styles = StyleSheet.create({
-  loading:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e1b4b' },
+  loading:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1b5e20' },
   offlineBanner:    { backgroundColor: '#1e293b', paddingVertical: 8, paddingHorizontal: 16, alignItems: 'center' },
   offlineText:      { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
   syncErrorBanner:  { backgroundColor: '#7c2d12', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   syncErrorText:    { color: '#fed7aa', fontSize: 12, fontWeight: '600', flex: 1 },
   syncRetryText:    { color: '#fff', fontSize: 12, fontWeight: '800', paddingLeft: 12 },
 });
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#f8fafc' }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>😕</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#1e293b', marginBottom: 8 }}>Something went wrong</Text>
+          <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 20 }}>
+            Please close and reopen the app. If the issue persists, contact support.
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}

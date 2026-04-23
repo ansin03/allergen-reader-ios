@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Allergen, HistoryItem, ScanResult } from '../types';
 import { API_URL } from '../constants';
 
-// ── Token storage ──────────────────────────────────────────────────────────────
-export async function getToken()          { return AsyncStorage.getItem('as_token'); }
-export async function setToken(t: string) { return AsyncStorage.setItem('as_token', t); }
-export async function clearToken()        { return AsyncStorage.removeItem('as_token'); }
+// ── Token storage (SecureStore with AsyncStorage fallback) ─────────────────────
+const TOKEN_KEY = 'as_token';
+export async function getToken()          { return SecureStore.getItemAsync(TOKEN_KEY); }
+export async function setToken(t: string) { return SecureStore.setItemAsync(TOKEN_KEY, t); }
+export async function clearToken()        { return SecureStore.deleteItemAsync(TOKEN_KEY); }
 
 // ── Base fetch wrapper ─────────────────────────────────────────────────────────
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -41,6 +43,8 @@ export const authApi = {
     request<AuthResponse>('/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
   onboard: () =>
     request<{ ok: boolean }>('/auth/onboard', { method: 'POST' }),
+  deleteAccount: () =>
+    request<{ ok: boolean }>('/auth/account', { method: 'DELETE' }),
   forgotPassword: (email: string) =>
     request<{ ok: boolean }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
   resetPassword: (email: string, otp: string, newPassword: string) =>

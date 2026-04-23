@@ -7,11 +7,12 @@ import { authApi, setToken } from '../services/api';
 
 interface Props {
   onAuth: (name: string, email: string, hasOnboarded: boolean) => void;
+  onGuest: () => void;
 }
 
 type Screen = 'auth' | 'forgot' | 'reset';
 
-export default function LoginScreen({ onAuth }: Props) {
+export default function LoginScreen({ onAuth, onGuest }: Props) {
   const [mode,        setMode]        = useState<'login' | 'signup'>('login');
   const [screen,      setScreen]      = useState<Screen>('auth');
   const [name,        setName]        = useState('');
@@ -136,8 +137,8 @@ export default function LoginScreen({ onAuth }: Props) {
         <View style={styles.logoBox}>
           <Text style={styles.logoEmoji}>🛡️</Text>
         </View>
-        <Text style={styles.title}>AllergenSafe</Text>
-        <Text style={styles.subtitle}>Your AI food guardian</Text>
+        <Text style={styles.title}>EatSurely AI</Text>
+        <Text style={styles.subtitle}>Food Allergen Scanner</Text>
 
         <View style={styles.card}>
           <View style={styles.tabs}>
@@ -178,13 +179,19 @@ export default function LoginScreen({ onAuth }: Props) {
             </TouchableOpacity>
           )}
         </View>
+
+        <TouchableOpacity style={styles.guestBtn} onPress={onGuest}>
+          <Text style={styles.guestText}>Continue without an account</Text>
+        </TouchableOpacity>
+        <Text style={styles.guestNote}>Scan labels instantly — sign up later to sync your profile across devices</Text>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#1e1b4b' },
+  container:     { flex: 1, backgroundColor: '#1b5e20' },
   inner:         { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   logoBox:       { width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   logoEmoji:     { fontSize: 40 },
@@ -199,8 +206,11 @@ const styles = StyleSheet.create({
   input:         { borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, fontSize: 14, fontWeight: '600', marginBottom: 12, backgroundColor: '#f8fafc' },
   error:         { color: '#f43f5e', fontSize: 12, fontWeight: '600', marginBottom: 8 },
   infoMsg:       { color: '#059669', fontSize: 12, fontWeight: '600', marginBottom: 12, backgroundColor: '#d1fae5', borderRadius: 10, padding: 10 },
-  button:        { backgroundColor: '#7c3aed', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  button:        { backgroundColor: '#43a047', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   buttonText:    { color: '#fff', fontWeight: '700', fontSize: 16 },
   linkRow:       { alignItems: 'center', marginTop: 16 },
-  link:          { color: '#7c3aed', fontWeight: '700', fontSize: 14 },
+  link:          { color: '#43a047', fontWeight: '700', fontSize: 14 },
+  guestBtn:      { marginTop: 24, alignItems: 'center', paddingVertical: 14 },
+  guestText:     { color: 'rgba(255,255,255,0.9)', fontWeight: '700', fontSize: 15, textDecorationLine: 'underline' },
+  guestNote:     { color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center', marginTop: 6, paddingHorizontal: 32 },
 });

@@ -23,7 +23,7 @@ const FILTERS: { id: FilterType; label: string }[] = [
 ];
 
 const FILTER_COLORS: Record<FilterType, string> = {
-  all:     '#7c3aed',
+  all:     '#43a047',
   safe:    '#059669',
   warning: '#d97706',
   danger:  '#dc2626',
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   emptyIcon:             { fontSize: 56 },
   emptyTitle:            { fontSize: 20, fontWeight: '800', color: '#475569' },
   emptySubtitle:         { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
-  startScanBtn:          { backgroundColor: '#7c3aed', borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14 },
+  startScanBtn:          { backgroundColor: '#43a047', borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14 },
   startScanText:         { color: '#fff', fontWeight: '700', fontSize: 15 },
   list:                  { padding: 16, gap: 10 },
   item:                  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },

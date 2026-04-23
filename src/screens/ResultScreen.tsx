@@ -4,16 +4,18 @@ import { ScanResult, Allergen, DetectedAllergen } from '../types';
 
 
 function highlightIngredients(ingredients: string[], detected: DetectedAllergen[]) {
-  // Only highlight the exact ingredient strings that were matched — not every
-  // occurrence of the allergen name as a substring in unrelated ingredients.
-  const matchedIngredients = new Set(detected.map(d => d.ingredient.toLowerCase().trim()));
+  const matchedIngredients = detected.map(d => d.ingredient.toLowerCase().trim());
+
+  const isHighlighted = (ingredient: string) => {
+    const ing = ingredient.toLowerCase().trim();
+    return matchedIngredients.some(m => ing === m || ing.includes(m) || m.includes(ing));
+  };
 
   return (
     <>
       {ingredients.map((ingredient, i) => {
-        const isMatch = matchedIngredients.has(ingredient.toLowerCase().trim());
         const separator = i < ingredients.length - 1 ? ', ' : '';
-        return isMatch
+        return isHighlighted(ingredient)
           ? <Text key={i}><Text style={{ backgroundColor: '#fef08a', color: '#713f12', fontWeight: '700' }}>{ingredient}</Text>{separator}</Text>
           : <Text key={i}>{ingredient}{separator}</Text>;
       })}
@@ -29,10 +31,10 @@ interface Props {
 }
 
 const RATING_CONFIG = {
-  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'All Clear',            emoji: '✅' },
-  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',      emoji: '⚠️' },
-  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Allergens Detected',   emoji: '🚨' },
-  unknown: { bg: '#f8fafc', border: '#cbd5e1', text: '#475569', label: 'Ingredients Not Found', emoji: '🔍' },
+  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'No Flagged Ingredients', emoji: '✅' },
+  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',         emoji: '⚠️' },
+  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Ingredients Flagged',     emoji: '🚨' },
+  unknown: { bg: '#f8fafc', border: '#cbd5e1', text: '#475569', label: 'Ingredients Not Found',   emoji: '🔍' },
 };
 
 // Returns true if ingredientText contains allergenName as a whole word / phrase,
@@ -52,16 +54,52 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
     d.matchedAllergens.some(m => enabledNames.includes(m.toLowerCase()))
   );
 
-  // Client-side fallback: whole-word scan for enabled allergens the AI may have missed
+  // Client-side synonym dictionary — mirrors server, used for fallback detection
+  const CLIENT_SYNONYMS: Record<string, string[]> = {
+    'peanuts':   ['peanut', 'peanut flour', 'peanut butter', 'peanut oil', 'peanut protein',
+                  'groundnut', 'groundnuts', 'ground nut', 'arachis oil', 'monkey nuts', 'mixed nuts'],
+    'dairy':     ['milk', 'whey', 'casein', 'caseinate', 'lactose', 'butter', 'cream', 'cheese',
+                  'yogurt', 'yoghurt', 'lactalbumin', 'lactoglobulin', 'ghee', 'kefir',
+                  'milk protein', 'whey protein', 'milk solids', 'milk powder', 'buttermilk'],
+    'gluten':    ['wheat', 'barley', 'rye', 'oats', 'spelt', 'semolina', 'malt', 'triticale',
+                  'durum', 'farro', 'kamut', 'seitan', 'bulgur', 'couscous'],
+    'eggs':      ['egg', 'albumin', 'albumen', 'mayonnaise', 'meringue', 'ovalbumin', 'lysozyme'],
+    'soy':       ['soya', 'soybean', 'soy protein', 'soy flour', 'soy milk', 'tofu', 'tempeh',
+                  'miso', 'edamame', 'tamari', 'shoyu', 'soy lecithin', 'tvp'],
+    'tree nuts': ['almond', 'cashew', 'walnut', 'pecan', 'pistachio', 'hazelnut', 'macadamia',
+                  'brazil nut', 'pine nut', 'chestnut', 'coconut', 'praline', 'marzipan'],
+    'shellfish': ['shrimp', 'prawn', 'crab', 'lobster', 'crayfish', 'scampi', 'krill'],
+    'fish':      ['cod', 'salmon', 'tuna', 'halibut', 'anchovy', 'sardine', 'mackerel', 'herring',
+                  'trout', 'haddock', 'tilapia', 'pollock', 'fish sauce', 'surimi'],
+    'sesame':    ['sesame', 'tahini', 'sesame oil', 'sesame seed', 'gingelly', 'til'],
+    'mustard':   ['mustard', 'mustard seed', 'mustard powder', 'mustard oil'],
+    'celery':    ['celery', 'celeriac', 'celery seed', 'celery salt'],
+    'lupin':     ['lupin', 'lupine', 'lupin flour', 'lupin bean'],
+    'sulphites': ['sulphur dioxide', 'sulfur dioxide', 'sodium sulphite', 'sodium sulfite',
+                  'sodium metabisulphite', 'sodium metabisulfite', 'e220', 'e221', 'e222', 'e223', 'e224'],
+    'molluscs':  ['squid', 'octopus', 'clam', 'oyster', 'mussel', 'scallop', 'abalone', 'cuttlefish'],
+  };
+
+  // Returns true if ingredient text matches the allergen — checks name, root (de-pluralised), and synonyms
+  const ingredientMatchesAllergen = (ingredient: string, allergenName: string): boolean => {
+    const key = allergenName.toLowerCase();
+    // Direct whole-word match on allergen name
+    if (matchesWholeWord(ingredient, key)) return true;
+    // De-pluralise: "Peanuts" → "Peanut", "Eggs" → "Egg"
+    const root = key.replace(/s$/, '');
+    if (root.length >= 3 && matchesWholeWord(ingredient, root)) return true;
+    // Synonym match
+    const synonyms = CLIENT_SYNONYMS[key] ?? [];
+    return synonyms.some(s => matchesWholeWord(ingredient, s));
+  };
+
+  // Client-side fallback: catch anything the AI may have missed
   const missedByAi: DetectedAllergen[] = [];
   const alreadyCaught = new Set(filtered.map(d => d.ingredient.toLowerCase()));
   for (const allergen of enabledAllergens) {
     for (const ingredient of result.ingredients) {
       const ingLower = ingredient.toLowerCase();
-      if (
-        matchesWholeWord(ingredient, allergen.name) &&
-        !alreadyCaught.has(ingLower)
-      ) {
+      if (!alreadyCaught.has(ingLower) && ingredientMatchesAllergen(ingredient, allergen.name)) {
         missedByAi.push({
           ingredient,
           matchedAllergens: [allergen.name],
@@ -129,7 +167,6 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
           {imageUri && <Image source={{ uri: imageUri }} style={styles.scannedImage} />}
           <Text style={styles.ratingEmoji}>{cfg.emoji}</Text>
           <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
-          {result.productName && <Text style={styles.productName}>{result.productName}</Text>}
         </View>
       )}
 
@@ -161,6 +198,13 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
               </View>
             );
           })}
+          {allDetected.some(d => getSeverity(d.matchedAllergens) === 'fatal') && (
+            <View style={styles.fatalNote}>
+              <Text style={styles.fatalNoteText}>
+                ⚠️ This product contains a life-threatening allergen. Do not consume.
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -195,6 +239,10 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
       <TouchableOpacity style={styles.scanAgainBtn} onPress={onScanAgain}>
         <Text style={styles.scanAgainText}>Scan Another</Text>
       </TouchableOpacity>
+
+      <Text style={styles.footerDisclaimer}>
+        Results are based on image analysis and may not be complete. Always check the product label before consuming.
+      </Text>
     </ScrollView>
   );
 }
@@ -228,6 +276,9 @@ const styles = StyleSheet.create({
   unknownEmoji:       { fontSize: 64, marginBottom: 20 },
   unknownTitle:       { fontSize: 22, fontWeight: '800', color: '#1e293b', textAlign: 'center', marginBottom: 12 },
   unknownText:        { fontSize: 15, color: '#64748b', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
-  scanAgainBtn:       { backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  fatalNote:          { marginTop: 12, backgroundColor: '#fff7ed', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f97316' },
+  fatalNoteText:      { fontSize: 12, color: '#9a3412', lineHeight: 17 },
+  scanAgainBtn:       { backgroundColor: '#43a047', borderRadius: 18, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   scanAgainText:      { color: '#fff', fontWeight: '700', fontSize: 16 },
+  footerDisclaimer:   { marginTop: 20, fontSize: 11, color: '#94a3b8', textAlign: 'center', lineHeight: 16, paddingHorizontal: 8 },
 });

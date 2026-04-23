@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Allergen, ScanResult } from '../types';
 import { analyzeApi } from '../services/api';
 
@@ -19,6 +20,18 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
   const [previewUri,  setPreviewUri]  = useState<string | null>(null);
 
   const activeNames = allergens.filter(a => a.enabled).map(a => a.name);
+
+  // Resize to max 1500px on longest side and compress to 0.6 quality before sending.
+  // Keeps ingredient text readable while significantly reducing token cost.
+  const compressImage = async (uri: string): Promise<string> => {
+    const MAX_DIMENSION = 1500;
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: MAX_DIMENSION } }],  // expo scales height proportionally
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    return result.uri;
+  };
 
   const analyzeImage = async (uri: string) => {
     setPreviewUri(null);
@@ -42,7 +55,9 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
         return;
       }
 
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+      // Compress and resize before encoding — reduces OpenAI token cost ~50%
+      const compressedUri = await compressImage(uri);
+      const base64 = await FileSystem.readAsStringAsync(compressedUri, { encoding: 'base64' as any });
       const result = await analyzeApi.analyze(base64, activeNames);
 
       if (result.ingredientsVisible === false) {
@@ -77,28 +92,21 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
           ))
       : Promise.resolve(true);
 
-  const MIN_DIMENSION = 640; // minimum width or height in pixels
-
-  const checkResolution = (width: number, height: number): boolean => {
-    if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
-      Alert.alert(
-        'Image Too Small',
-        `The image is ${width}×${height}px which is too low resolution to read ingredients reliably. Please take a new photo closer to the label.`,
-      );
-      return false;
-    }
-    return true;
-  };
+  const MIN_DIMENSION = 640;
 
   const takePhoto = async () => {
     if (!isOnline) { Alert.alert('No Connection', 'An internet connection is required to analyse labels.'); return; }
     if (!await warnIfNoAllergens()) return;
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) { Alert.alert('Camera permission required'); return; }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false });
     if (!result.canceled && result.assets[0]?.uri) {
       const { width, height } = result.assets[0];
-      if (!checkResolution(width, height)) return;
+      // Block low-res camera photos — user can simply retake
+      if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+        Alert.alert('Image Too Small', `The image is ${width}×${height}px. Please move closer to the label and retake.`);
+        return;
+      }
       setPreviewUri(result.assets[0].uri);
     }
   };
@@ -106,10 +114,21 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
   const pickImage = async () => {
     if (!isOnline) { Alert.alert('No Connection', 'An internet connection is required to analyse labels.'); return; }
     if (!await warnIfNoAllergens()) return;
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
     if (!result.canceled && result.assets[0]?.uri) {
       const { width, height } = result.assets[0];
-      if (!checkResolution(width, height)) return;
+      // Warn but allow — user picked this image intentionally and can't reshoot it
+      if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+        const proceed = await new Promise<boolean>(resolve =>
+          Alert.alert(
+            'Low Resolution Image',
+            `This image is ${width}×${height}px which may be too small to read accurately. Results might be incomplete.`,
+            [{ text: 'Choose Different', style: 'cancel', onPress: () => resolve(false) },
+             { text: 'Use Anyway', onPress: () => resolve(true) }],
+          )
+        );
+        if (!proceed) return;
+      }
       setPreviewUri(result.assets[0].uri);
     }
   };
@@ -118,7 +137,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#7c3aed" />
+        <ActivityIndicator size="large" color="#43a047" />
         <Text style={styles.loadingText}>Analysing label...</Text>
         <Text style={styles.loadingSubtext}>This usually takes a few seconds</Text>
       </View>
@@ -134,11 +153,6 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
           Make sure the full ingredient list is visible and in focus
         </Text>
         <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="contain" />
-        <View style={styles.previewTips}>
-          <Text style={styles.tipItem}>✓ Full ingredient list visible</Text>
-          <Text style={styles.tipItem}>✓ Text is sharp and readable</Text>
-          <Text style={styles.tipItem}>✓ Nothing is cut off at the edges</Text>
-        </View>
         <TouchableOpacity style={styles.confirmBtn} onPress={() => analyzeImage(previewUri)} disabled={loading}>
           <Text style={styles.confirmBtnText}>✓  Looks Good — Analyse</Text>
         </TouchableOpacity>
@@ -178,11 +192,11 @@ const styles = StyleSheet.create({
   subtitle:         { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 32, lineHeight: 20 },
   loadingText:      { marginTop: 16, fontSize: 16, color: '#64748b', fontWeight: '600' },
   loadingSubtext:   { marginTop: 6, fontSize: 13, color: '#94a3b8' },
-  primaryBtn:       { width: '100%', backgroundColor: '#7c3aed', borderRadius: 18, paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
+  primaryBtn:       { width: '100%', backgroundColor: '#43a047', borderRadius: 18, paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
   primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
   secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: '#e2e8f0', marginBottom: 28 },
   secondaryBtnText: { color: '#475569', fontWeight: '700', fontSize: 16 },
-  hints:            { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#7c3aed' },
+  hints:            { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#43a047' },
   hintsTitle:       { fontSize: 13, fontWeight: '700', color: '#1e293b', marginBottom: 8 },
   hintItem:         { fontSize: 13, color: '#475569', lineHeight: 22 },
 
@@ -191,9 +205,7 @@ const styles = StyleSheet.create({
   previewTitle:     { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 6 },
   previewSubtitle:  { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   previewImage:     { width: '100%', flex: 1, borderRadius: 16, marginBottom: 16 },
-  previewTips:      { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 14, padding: 14, marginBottom: 16, gap: 6 },
-  tipItem:          { fontSize: 13, color: '#86efac', fontWeight: '600' },
-  confirmBtn:       { backgroundColor: '#7c3aed', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
+  confirmBtn:       { backgroundColor: '#43a047', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
   confirmBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
   retakeBtn:        { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   retakeBtnText:    { color: '#cbd5e1', fontWeight: '700', fontSize: 16 },

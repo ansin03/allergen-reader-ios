@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Allergen, HistoryItem } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
@@ -31,9 +31,57 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
   const navigation = useNavigation<any>();
   const active = allergens.filter(a => a.enabled);
   const recent = history[0];
+  const [showAbout, setShowAbout] = useState(false);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+      {/* About Modal */}
+      <Modal visible={showAbout} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAbout(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>About EatSurely AI</Text>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowAbout(false)}>
+              <Text style={styles.modalCloseText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <View style={styles.modalLogoBox}>
+              <Text style={{ fontSize: 40 }}>🛡️</Text>
+            </View>
+            <Text style={styles.modalAppName}>EatSurely AI</Text>
+            <Text style={styles.modalVersion}>Version 1.0.0 · Food Allergen Scanner</Text>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalHeading}>HOW IT WORKS</Text>
+              <Text style={styles.modalText}>
+                EatSurely AI uses AI image recognition to scan product labels and flag ingredients that match your allergen profile.
+              </Text>
+            </View>
+
+            <View style={styles.modalDivider} />
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalHeading}>IMPORTANT LIMITATIONS</Text>
+              <Text style={styles.modalText}>
+                Results are for informational purposes only and may not be complete or accurate due to image quality, labelling variations, or data limitations.{'\n\n'}
+                Always read product packaging carefully and verify ingredients before consuming.{'\n\n'}
+                If you have severe or life-threatening allergies, do not rely solely on this app. Consult a qualified healthcare professional for personalised guidance.{'\n\n'}
+                This app does not provide medical or dietary advice.
+              </Text>
+            </View>
+
+            <View style={styles.modalDivider} />
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalHeading}>MANUFACTURING & CROSS-CONTAMINATION</Text>
+              <Text style={styles.modalText}>
+                Manufacturing processes may change. Cross-contamination risks may not always be clearly identified on packaging. The "may contain" warnings shown in this app are based on what is printed on the label at the time of scanning.
+              </Text>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Header */}
       <View style={styles.header}>
@@ -41,9 +89,9 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
           <Text style={styles.greeting}>{greeting()}</Text>
           <Text style={styles.headline}>{userName ? userName : 'Welcome'}</Text>
         </View>
-        <View style={styles.shieldBadge}>
+        <TouchableOpacity style={styles.shieldBadge} onPress={() => setShowAbout(true)} activeOpacity={0.7}>
           <Text style={styles.shieldEmoji}>🛡️</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
 
@@ -150,7 +198,7 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
       <View style={styles.tip}>
         <Text style={styles.tipEmoji}>💡</Text>
         <Text style={styles.tipText}>
-          Our AI recognises scientific names — "casein" and "whey" both trigger Dairy alerts.
+          The app flags ingredients commonly associated with your allergens — including scientific names like "casein" and "whey" for Dairy.
         </Text>
       </View>
 
@@ -172,22 +220,22 @@ const styles = StyleSheet.create({
   summaryText:            { fontSize: 13, fontWeight: '600', color: '#475569' },
   summaryDivider:         { width: 1, height: 14, backgroundColor: '#e2e8f0' },
 
-  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, backgroundColor: '#312e81' },
+  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, backgroundColor: '#2e7d32' },
   heroContent:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  heroEyebrow:            { fontSize: 10, fontWeight: '800', color: '#818cf8', letterSpacing: 1.5, marginBottom: 6 },
+  heroEyebrow:            { fontSize: 10, fontWeight: '800', color: '#81c784', letterSpacing: 1.5, marginBottom: 6 },
   heroTitle:              { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
-  heroSubtitle:           { fontSize: 13, color: '#a5b4fc', lineHeight: 18 },
+  heroSubtitle:           { fontSize: 13, color: '#a5d6a7', lineHeight: 18 },
   heroIconCircle:         { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   heroIcon:               { fontSize: 28 },
   heroPillBtn:            { alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
-  heroPillText:           { color: '#312e81', fontWeight: '700', fontSize: 14 },
+  heroPillText:           { color: '#2e7d32', fontWeight: '700', fontSize: 14 },
 
   card:                   { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   cardHeader:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   cardTitle:              { fontSize: 15, fontWeight: '700', color: '#0f172a' },
   cardSubtitle:           { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   editBtn:                { backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
-  editBtnText:            { fontSize: 12, fontWeight: '700', color: '#7c3aed' },
+  editBtnText:            { fontSize: 12, fontWeight: '700', color: '#43a047' },
 
   emptyState:             { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#e2e8f0', borderRadius: 14, padding: 16, justifyContent: 'center' },
   emptyStateIcon:         { fontSize: 18 },
@@ -208,7 +256,22 @@ const styles = StyleSheet.create({
   recentAllergens:        { fontSize: 12, color: '#ef4444', fontWeight: '600', marginTop: 3 },
   chevron:                { fontSize: 22, color: '#cbd5e1' },
 
-  tip:                    { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#7c3aed' },
+  tip:                    { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#43a047' },
   tipEmoji:               { fontSize: 16, marginTop: 1 },
   tipText:                { flex: 1, fontSize: 13, color: '#475569', lineHeight: 20 },
+
+  // About modal
+  modalContainer:         { flex: 1, backgroundColor: '#f8fafc' },
+  modalHeader:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+  modalTitle:             { fontSize: 17, fontWeight: '800', color: '#0f172a' },
+  modalCloseBtn:          { backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 },
+  modalCloseText:         { fontSize: 14, fontWeight: '700', color: '#43a047' },
+  modalContent:           { padding: 24, paddingBottom: 48 },
+  modalLogoBox:           { width: 72, height: 72, borderRadius: 22, backgroundColor: '#43a047', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12 },
+  modalAppName:           { fontSize: 22, fontWeight: '900', color: '#0f172a', textAlign: 'center', marginBottom: 4 },
+  modalVersion:           { fontSize: 12, color: '#94a3b8', textAlign: 'center', marginBottom: 24 },
+  modalSection:           { marginBottom: 4 },
+  modalHeading:           { fontSize: 11, fontWeight: '800', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
+  modalText:              { fontSize: 14, color: '#475569', lineHeight: 22 },
+  modalDivider:           { height: 1, backgroundColor: '#e2e8f0', marginVertical: 20 },
 });
