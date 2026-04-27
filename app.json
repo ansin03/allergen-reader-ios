@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.eatsurely.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "EatSurely AI needs camera access to scan food ingredient labels.",
         "NSPhotoLibraryUsageDescription": "EatSurely AI needs photo access to analyze food ingredient labels from your library.",
