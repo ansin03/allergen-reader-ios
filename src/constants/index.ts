@@ -1,9 +1,6 @@
 import { Allergen } from '../types';
 
-const DEV_API  = 'http://10.0.0.4:4000/api';
-const PROD_API = 'https://api.eat-surely.com/api';
-
-export const API_URL = __DEV__ ? DEV_API : PROD_API;
+export const API_URL = process.env.EXPO_PUBLIC_API_URL as string;
 
 export const DEFAULT_ALLERGENS: Allergen[] = [
   { id: '1',  name: 'Peanuts',   enabled: true,  severity: 'fatal',       emoji: '🥜' },
