@@ -183,7 +183,7 @@ export default function App() {
   if (!appReady) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#43a047" />
+        <ActivityIndicator size="large" color="#6D28D9" />
       </View>
     );
   }
@@ -197,14 +197,14 @@ export default function App() {
       {/* ── Offline banner ── */}
       {!isOnline && (
         <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>📡  No internet connection — scanning unavailable</Text>
+          <Text style={styles.offlineText}>No internet connection — scanning unavailable</Text>
         </View>
       )}
 
       {/* ── Sync error banner ── */}
       {isOnline && syncError && (
         <View style={styles.syncErrorBanner}>
-          <Text style={styles.syncErrorText}>⚠️  Allergen changes not saved to server</Text>
+          <Text style={styles.syncErrorText}>Allergen changes not saved to server</Text>
           <TouchableOpacity onPress={() => {
             if (pendingAllergenSync.current) {
               allergensApi.update(pendingAllergenSync.current)
@@ -217,7 +217,7 @@ export default function App() {
         </View>
       )}
 
-      <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#43a047', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
+      <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#6D28D9', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
 
         <Tab.Screen name="Home" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}>
           {() => (
@@ -268,7 +268,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loading:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1b5e20' },
+  loading:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   offlineBanner:    { backgroundColor: '#1e293b', paddingVertical: 8, paddingHorizontal: 16, alignItems: 'center' },
   offlineText:      { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
   syncErrorBanner:  { backgroundColor: '#7c2d12', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -285,10 +285,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#f8fafc' }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>😕</Text>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: '#1e293b', marginBottom: 8 }}>Something went wrong</Text>
-          <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 20 }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#F9FAFB' }}>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827', marginBottom: 8 }}>Something went wrong</Text>
+          <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
             Please close and reopen the app. If the issue persists, contact support.
           </Text>
         </View>

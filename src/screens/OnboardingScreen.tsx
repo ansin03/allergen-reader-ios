@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, StyleSheet,
   TextInput, Switch,
 } from 'react-native';
 import { Allergen, AllergenSeverity, Profile } from '../types';
 import { DEFAULT_ALLERGENS, SEVERITY_CONFIG } from '../constants';
+import PressRing from '../components/PressRing';
+
+const PURPLE = '#6D28D9';
+const PURPLE_LIGHT = '#EDE9FE';
+const BLACK = '#111827';
+const GRAY = '#6B7280';
+const MUTED = '#9CA3AF';
+const BORDER = '#E5E7EB';
 
 interface Props {
   onComplete: (profile: Profile) => void;
@@ -20,10 +28,10 @@ const FEATURES = [
 ];
 
 export default function OnboardingScreen({ onComplete }: Props) {
-  const [step,                setStep]               = useState(0);
-  const [profileName,         setProfileName]         = useState('');
-  const [allergens,           setAllergens]           = useState<Allergen[]>(DEFAULT_ALLERGENS);
-  const [disclaimerAccepted,  setDisclaimerAccepted]  = useState(false);
+  const [step,               setStep]              = useState(0);
+  const [profileName,        setProfileName]        = useState('');
+  const [allergens,          setAllergens]          = useState<Allergen[]>(DEFAULT_ALLERGENS);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   const toggle = (id: string) =>
     setAllergens(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -44,7 +52,6 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Progress */}
       <View style={styles.progressBar}>
         {STEPS.map((_, i) => (
           <View key={i} style={[styles.progressStep, i <= step && styles.progressStepActive]} />
@@ -57,7 +64,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
         {step === 0 && (
           <View style={styles.section}>
             <View style={styles.logoBox}><Text style={styles.logoEmoji}>🛡️</Text></View>
-            <Text style={styles.mainTitle}>EatSurely AI</Text>
+            <Text style={styles.mainTitle}>EatSurely</Text>
             <Text style={styles.mainSubtitle}>Food Allergen Scanner — scan any label and know instantly if it contains your allergens.</Text>
             {FEATURES.map(([icon, text]) => (
               <View key={String(text)} style={styles.featureRow}>
@@ -79,6 +86,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
               value={profileName}
               onChangeText={setProfileName}
               autoFocus
+              placeholderTextColor={MUTED}
             />
           </View>
         )}
@@ -95,18 +103,18 @@ export default function OnboardingScreen({ onComplete }: Props) {
                     <Text style={styles.allergenEmoji}>{a.emoji}</Text>
                     <Text style={[styles.allergenName, !a.enabled && styles.allergenNameDisabled]}>{a.name}</Text>
                     <Switch value={a.enabled} onValueChange={() => toggle(a.id)}
-                      trackColor={{ true: '#43a047' }} />
+                      trackColor={{ true: PURPLE }} thumbColor="#fff" />
                   </View>
                   {a.enabled && (
                     <View style={styles.severityRow}>
                       {(['fatal', 'intolerance', 'mild'] as AllergenSeverity[]).map(s => (
-                        <TouchableOpacity key={s}
-                          style={[styles.severityBtn, a.severity === s && { backgroundColor: SEVERITY_CONFIG[s].color, borderColor: SEVERITY_CONFIG[s].textColor }]}
-                          onPress={() => setSeverity(a.id, s)}>
+                        <PressRing key={s} borderRadius={10} containerStyle={styles.flexOne}
+                          onPress={() => setSeverity(a.id, s)}
+                          style={[styles.severityBtn, a.severity === s && { backgroundColor: SEVERITY_CONFIG[s].color, borderColor: SEVERITY_CONFIG[s].textColor }]}>
                           <Text style={[styles.severityBtnText, a.severity === s && { color: SEVERITY_CONFIG[s].textColor }]}>
                             {SEVERITY_CONFIG[s].label}
                           </Text>
-                        </TouchableOpacity>
+                        </PressRing>
                       ))}
                     </View>
                   )}
@@ -131,8 +139,6 @@ export default function OnboardingScreen({ onComplete }: Props) {
                 : <Text style={styles.alertsList}>{allergens.filter(a => a.enabled).map(a => `${a.emoji} ${a.name}`).join('  •  ')}</Text>
               }
             </View>
-
-            {/* Disclaimer */}
             <View style={styles.disclaimerBox}>
               <Text style={styles.disclaimerTitle}>⚠️  Important — Please Read</Text>
               <Text style={styles.disclaimerText}>
@@ -144,43 +150,36 @@ export default function OnboardingScreen({ onComplete }: Props) {
                 {'\n\n'}
                 If you have <Text style={styles.disclaimerBold}>severe or life-threatening allergies</Text>, do not rely solely on this app. This app does not provide medical or dietary advice. Consult a qualified healthcare professional for personalised guidance.
               </Text>
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => setDisclaimerAccepted(v => !v)}
-                activeOpacity={0.7}
-              >
+              <PressRing borderRadius={8} onPress={() => setDisclaimerAccepted(v => !v)} style={styles.checkboxRow}>
                 <View style={[styles.checkbox, disclaimerAccepted && styles.checkboxChecked]}>
                   {disclaimerAccepted && <Text style={styles.checkboxTick}>✓</Text>}
                 </View>
-                <Text style={styles.checkboxLabel}>
-                  I understand and accept these limitations
-                </Text>
-              </TouchableOpacity>
+                <Text style={styles.checkboxLabel}>I understand and accept these limitations</Text>
+              </PressRing>
             </View>
           </View>
         )}
       </ScrollView>
 
-      {/* Navigation */}
       <View style={styles.nav}>
         {step > 0 && step < 3 && (
-          <TouchableOpacity style={styles.backBtn} onPress={() => setStep(s => s - 1)}>
+          <PressRing borderRadius={16} onPress={() => setStep(s => s - 1)} style={styles.backBtn}>
             <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
+          </PressRing>
         )}
         {step < 3 && (
-          <TouchableOpacity style={[styles.nextBtn, !canNext && styles.nextBtnDisabled]}
-            onPress={() => canNext && setStep(s => s + 1)}>
+          <PressRing borderRadius={16} containerStyle={styles.flexOne}
+            onPress={() => canNext && setStep(s => s + 1)}
+            style={[styles.nextBtn, !canNext && styles.nextBtnDisabled]}>
             <Text style={styles.nextBtnText}>{step === 2 ? 'Finish Setup' : 'Next'} →</Text>
-          </TouchableOpacity>
+          </PressRing>
         )}
         {step === 3 && (
-          <TouchableOpacity
-            style={[styles.startBtn, !disclaimerAccepted && styles.nextBtnDisabled]}
+          <PressRing borderRadius={16} containerStyle={styles.flexOne}
             onPress={() => disclaimerAccepted && complete()}
-          >
+            style={[styles.startBtn, !disclaimerAccepted && styles.nextBtnDisabled]}>
             <Text style={styles.nextBtnText}>Start Scanning!</Text>
-          </TouchableOpacity>
+          </PressRing>
         )}
       </View>
     </View>
@@ -188,56 +187,56 @@ export default function OnboardingScreen({ onComplete }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container:            { flex: 1, backgroundColor: '#f1f8f1' },
+  container:            { flex: 1, backgroundColor: '#fff' },
   progressBar:          { flexDirection: 'row', gap: 6, paddingHorizontal: 20, paddingTop: 60, paddingBottom: 4 },
-  progressStep:         { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#e2e8f0' },
-  progressStepActive:   { backgroundColor: '#43a047' },
-  stepLabel:            { fontSize: 11, fontWeight: '700', color: '#94a3b8', paddingHorizontal: 20, marginBottom: 8 },
+  progressStep:         { flex: 1, height: 4, borderRadius: 2, backgroundColor: BORDER },
+  progressStepActive:   { backgroundColor: PURPLE },
+  stepLabel:            { fontSize: 11, fontWeight: '700', color: MUTED, paddingHorizontal: 20, marginBottom: 8 },
   content:              { flex: 1 },
   contentInner:         { padding: 20, paddingBottom: 8 },
   section:              { gap: 12 },
-  logoBox:              { width: 80, height: 80, borderRadius: 24, backgroundColor: '#43a047', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  logoBox:              { width: 80, height: 80, borderRadius: 24, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   logoEmoji:            { fontSize: 40 },
-  mainTitle:            { fontSize: 28, fontWeight: '900', color: '#1e293b', textAlign: 'center' },
-  mainSubtitle:         { fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 20 },
-  featureRow:           { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 14 },
+  mainTitle:            { fontSize: 34, fontWeight: '700', color: BLACK, textAlign: 'center', letterSpacing: -0.5 },
+  mainSubtitle:         { fontSize: 15, fontWeight: '400', color: GRAY, textAlign: 'center', lineHeight: 22 },
+  featureRow:           { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FAFAFA', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER },
   featureIcon:          { fontSize: 22 },
-  featureText:          { fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 },
-  sectionTitle:         { fontSize: 22, fontWeight: '800', color: '#1e293b' },
-  sectionSubtitle:      { fontSize: 14, color: '#64748b' },
-  label:                { fontSize: 13, fontWeight: '700', color: '#475569' },
-  input:                { borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontWeight: '600', backgroundColor: '#fff' },
-  allergenCard:         { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 2, borderColor: '#f1f5f9' },
-  allergenCardActive:   { borderColor: '#c8e6c9' },
+  featureText:          { fontSize: 14, fontWeight: '600', color: GRAY, flex: 1 },
+  sectionTitle:         { fontSize: 28, fontWeight: '700', color: BLACK, letterSpacing: -0.4 },
+  sectionSubtitle:      { fontSize: 15, fontWeight: '400', color: GRAY, lineHeight: 22 },
+  label:                { fontSize: 13, fontWeight: '700', color: GRAY },
+  input:                { borderWidth: 1.5, borderColor: BORDER, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontWeight: '500', backgroundColor: '#FAFAFA', color: BLACK },
+  allergenCard:         { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: BORDER },
+  allergenCardActive:   { borderColor: '#DDD6FE' },
   allergenRow:          { flexDirection: 'row', alignItems: 'center' },
   allergenEmoji:        { fontSize: 22, marginRight: 12 },
-  allergenName:         { flex: 1, fontSize: 15, fontWeight: '700', color: '#1e293b' },
-  allergenNameDisabled: { color: '#94a3b8' },
+  allergenName:         { flex: 1, fontSize: 15, fontWeight: '700', color: BLACK },
+  allergenNameDisabled: { color: MUTED },
   severityRow:          { flexDirection: 'row', gap: 6, marginTop: 10 },
-  severityBtn:          { flex: 1, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 10, paddingVertical: 6, alignItems: 'center', backgroundColor: '#f8fafc' },
-  severityBtnText:      { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  flexOne:              { flex: 1 },
+  severityBtn:          { borderWidth: 1.5, borderColor: BORDER, borderRadius: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' },
+  severityBtnText:      { fontSize: 11, fontWeight: '700', color: MUTED },
   doneEmoji:            { fontSize: 72, marginBottom: 8 },
-  doneTitle:            { fontSize: 28, fontWeight: '900', color: '#1e293b' },
-  doneSubtitle:         { fontSize: 14, color: '#64748b', textAlign: 'center' },
-  activeAlertsBox:      { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%' },
-  activeAlertsLabel:    { fontSize: 10, fontWeight: '800', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
-  noAlerts:             { fontSize: 13, color: '#94a3b8' },
-  alertsList:           { fontSize: 13, color: '#475569', lineHeight: 22 },
+  doneTitle:            { fontSize: 28, fontWeight: '900', color: BLACK },
+  doneSubtitle:         { fontSize: 14, color: GRAY, textAlign: 'center' },
+  activeAlertsBox:      { backgroundColor: '#FAFAFA', borderRadius: 16, padding: 16, width: '100%', borderWidth: 1, borderColor: BORDER },
+  activeAlertsLabel:    { fontSize: 10, fontWeight: '800', color: MUTED, letterSpacing: 1, marginBottom: 8 },
+  noAlerts:             { fontSize: 13, color: MUTED },
+  alertsList:           { fontSize: 13, color: GRAY, lineHeight: 22 },
   disclaimerBox:        { width: '100%', backgroundColor: '#fff7ed', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#fed7aa', gap: 12 },
   disclaimerTitle:      { fontSize: 13, fontWeight: '800', color: '#9a3412' },
   disclaimerText:       { fontSize: 12, color: '#7c2d12', lineHeight: 18 },
   disclaimerBold:       { fontWeight: '800' },
-  checkboxRow:          { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
-  checkbox:             { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#f97316', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  checkboxChecked:      { backgroundColor: '#f97316', borderColor: '#f97316' },
+  checkboxRow:          { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, paddingVertical: 4 },
+  checkbox:             { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: PURPLE, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  checkboxChecked:      { backgroundColor: PURPLE, borderColor: PURPLE },
   checkboxTick:         { color: '#fff', fontSize: 14, fontWeight: '900' },
   checkboxLabel:        { flex: 1, fontSize: 13, fontWeight: '700', color: '#7c2d12', lineHeight: 18 },
-
   nav:                  { flexDirection: 'row', gap: 12, padding: 20, paddingBottom: 40 },
-  backBtn:              { paddingHorizontal: 20, paddingVertical: 16, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0' },
-  backBtnText:          { fontWeight: '700', color: '#475569', fontSize: 15 },
-  nextBtn:              { flex: 1, backgroundColor: '#43a047', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  nextBtnDisabled:      { opacity: 0.4 },
+  backBtn:              { paddingHorizontal: 20, paddingVertical: 16, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER },
+  backBtnText:          { fontWeight: '700', color: GRAY, fontSize: 15 },
+  nextBtn:              { backgroundColor: PURPLE, borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+  nextBtnDisabled:      { opacity: 0.35 },
   nextBtnText:          { color: '#fff', fontWeight: '700', fontSize: 15 },
-  startBtn:             { flex: 1, backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  startBtn:             { backgroundColor: PURPLE, borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
 });

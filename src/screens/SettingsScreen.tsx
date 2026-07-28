@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Switch,
+  View, Text, ScrollView, Switch,
   TextInput, StyleSheet, Alert,
 } from 'react-native';
 import { Allergen, AllergenSeverity } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
+import PressRing from '../components/PressRing';
+
+const PURPLE = '#6D28D9';
+const PURPLE_LIGHT = '#EDE9FE';
+const BLACK = '#111827';
+const GRAY = '#6B7280';
+const MUTED = '#9CA3AF';
+const BORDER = '#E5E7EB';
 
 interface Props {
   allergens: Allergen[];
@@ -61,10 +69,10 @@ export default function SettingsScreen({ allergens, onToggle, onAdd, onRemove, o
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {isGuest && (
-        <TouchableOpacity style={styles.guestBanner} onPress={onSignIn}>
+        <PressRing borderRadius={14} onPress={onSignIn} style={styles.guestBanner}>
           <Text style={styles.guestBannerTitle}>You're using EatSurely as a guest</Text>
           <Text style={styles.guestBannerSub}>Sign in to sync your allergen profile across devices →</Text>
-        </TouchableOpacity>
+        </PressRing>
       )}
 
       <Text style={styles.heading}>My Allergens</Text>
@@ -81,10 +89,10 @@ export default function SettingsScreen({ allergens, onToggle, onAdd, onRemove, o
               </View>
             </View>
             <Switch value={a.enabled} onValueChange={() => onToggle(a.id)}
-              trackColor={{ true: '#43a047' }} />
-            <TouchableOpacity onPress={() => confirmRemove(a)} style={styles.removeBtn}>
+              trackColor={{ true: PURPLE }} thumbColor="#fff" />
+            <PressRing borderRadius={6} onPress={() => confirmRemove(a)} style={styles.removeBtn}>
               <Text style={styles.removeBtnText}>✕</Text>
-            </TouchableOpacity>
+            </PressRing>
           </View>
         );
       })}
@@ -92,69 +100,66 @@ export default function SettingsScreen({ allergens, onToggle, onAdd, onRemove, o
       <View style={styles.addSection}>
         <Text style={styles.addTitle}>Add Allergen</Text>
         <TextInput style={styles.input} placeholder="Allergen name" value={newName}
-          onChangeText={setNewName} />
+          onChangeText={setNewName} placeholderTextColor={MUTED} />
         <View style={styles.severityRow}>
           {(['fatal', 'intolerance', 'mild'] as AllergenSeverity[]).map(s => (
-            <TouchableOpacity key={s} style={[styles.severityBtn, newSeverity === s && styles.severityBtnActive]}
-              onPress={() => setNewSeverity(s)}>
+            <PressRing key={s} borderRadius={10} containerStyle={styles.flexOne}
+              onPress={() => setNewSeverity(s)}
+              style={[styles.severityBtn, newSeverity === s && styles.severityBtnActive]}>
               <Text style={[styles.severityBtnText, newSeverity === s && styles.severityBtnTextActive]}>
                 {SEVERITY_CONFIG[s].label}
               </Text>
-            </TouchableOpacity>
+            </PressRing>
           ))}
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <PressRing borderRadius={12} onPress={handleAdd} style={styles.addBtn}>
           <Text style={styles.addBtnText}>Add</Text>
-        </TouchableOpacity>
+        </PressRing>
       </View>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+      <PressRing borderRadius={16} onPress={onLogout} style={styles.logoutBtn}>
         <Text style={styles.logoutText}>{isGuest ? 'Sign In / Create Account' : 'Sign Out'}</Text>
-      </TouchableOpacity>
+      </PressRing>
 
       {!isGuest && (
-        <TouchableOpacity
-          style={styles.deleteAccountBtn}
-          onPress={confirmDeleteAccount}
-          disabled={deleting}
-        >
+        <PressRing borderRadius={16} onPress={confirmDeleteAccount} disabled={deleting} style={styles.deleteAccountBtn}>
           <Text style={styles.deleteAccountText}>
             {deleting ? 'Deleting Account…' : 'Delete Account'}
           </Text>
-        </TouchableOpacity>
+        </PressRing>
       )}
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: '#f8fafc' },
-  content:             { padding: 20, paddingBottom: 40 },
-  heading:             { fontSize: 22, fontWeight: '800', color: '#1e293b', marginBottom: 16 },
-  row:                 { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  emoji:               { fontSize: 24, marginRight: 12 },
-  rowInfo:             { flex: 1 },
-  rowName:             { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-  badge:               { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 2 },
-  badgeText:           { fontSize: 11, fontWeight: '600' },
-  removeBtn:           { marginLeft: 8, padding: 4 },
-  removeBtnText:       { color: '#94a3b8', fontSize: 16 },
-  addSection:          { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginTop: 16, marginBottom: 16 },
-  addTitle:            { fontSize: 16, fontWeight: '700', color: '#1e293b', marginBottom: 12 },
-  input:               { borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 12 },
-  severityRow:         { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  severityBtn:         { flex: 1, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
-  severityBtnActive:   { borderColor: '#43a047', backgroundColor: '#e8f5e9' },
-  severityBtnText:     { fontSize: 12, fontWeight: '600', color: '#64748b' },
-  severityBtnTextActive: { color: '#43a047' },
-  addBtn:              { backgroundColor: '#43a047', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  addBtnText:          { color: '#fff', fontWeight: '700', fontSize: 15 },
-  guestBanner:         { backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#c8e6c9' },
-  guestBannerTitle:    { fontSize: 14, fontWeight: '700', color: '#1b5e20', marginBottom: 4 },
-  guestBannerSub:      { fontSize: 13, color: '#2e7d32' },
-  logoutBtn:           { borderWidth: 2, borderColor: '#fca5a5', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  logoutText:          { color: '#ef4444', fontWeight: '700', fontSize: 15 },
-  deleteAccountBtn:    { borderWidth: 2, borderColor: '#fca5a5', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 12, backgroundColor: '#fee2e2' },
-  deleteAccountText:   { color: '#b91c1c', fontWeight: '700', fontSize: 15 },
+  container:             { flex: 1, backgroundColor: '#fff' },
+  content:               { padding: 20, paddingBottom: 40 },
+  heading:               { fontSize: 28, fontWeight: '700', color: BLACK, marginBottom: 16, letterSpacing: -0.4 },
+  row:                   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: BORDER },
+  emoji:                 { fontSize: 24, marginRight: 12 },
+  rowInfo:               { flex: 1 },
+  rowName:               { fontSize: 15, fontWeight: '700', color: BLACK },
+  badge:                 { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 2 },
+  badgeText:             { fontSize: 11, fontWeight: '600' },
+  removeBtn:             { marginLeft: 8, padding: 6 },
+  removeBtnText:         { color: MUTED, fontSize: 16 },
+  addSection:            { backgroundColor: '#FAFAFA', borderRadius: 16, padding: 16, marginTop: 16, marginBottom: 16, borderWidth: 1, borderColor: BORDER },
+  addTitle:              { fontSize: 16, fontWeight: '700', color: BLACK, marginBottom: 12 },
+  input:                 { borderWidth: 1.5, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 12, color: BLACK, backgroundColor: '#fff' },
+  severityRow:           { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  flexOne:               { flex: 1 },
+  severityBtn:           { borderWidth: 1.5, borderColor: BORDER, borderRadius: 10, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  severityBtnActive:     { borderColor: PURPLE, backgroundColor: PURPLE_LIGHT },
+  severityBtnText:       { fontSize: 12, fontWeight: '600', color: GRAY },
+  severityBtnTextActive: { color: PURPLE },
+  addBtn:                { backgroundColor: PURPLE, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  addBtnText:            { color: '#fff', fontWeight: '700', fontSize: 15 },
+  guestBanner:           { backgroundColor: PURPLE_LIGHT, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#DDD6FE' },
+  guestBannerTitle:      { fontSize: 14, fontWeight: '700', color: '#4C1D95', marginBottom: 4 },
+  guestBannerSub:        { fontSize: 13, color: PURPLE },
+  logoutBtn:             { borderWidth: 1.5, borderColor: '#fca5a5', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  logoutText:            { color: '#ef4444', fontWeight: '700', fontSize: 15 },
+  deleteAccountBtn:      { borderWidth: 1.5, borderColor: '#fca5a5', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 12, backgroundColor: '#fee2e2' },
+  deleteAccountText:     { color: '#b91c1c', fontWeight: '700', fontSize: 15 },
 });

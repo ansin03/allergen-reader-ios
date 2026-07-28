@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, StyleSheet, ActivityIndicator,
   Alert, ScrollView, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,6 +8,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Allergen, ScanResult } from '../types';
 import { analyzeApi } from '../services/api';
+import PressRing from '../components/PressRing';
+
+const PURPLE = '#6D28D9';
+const PURPLE_LIGHT = '#EDE9FE';
+const BLACK = '#111827';
+const GRAY = '#6B7280';
+const MUTED = '#9CA3AF';
+const BORDER = '#E5E7EB';
 
 interface Props {
   allergens: Allergen[];
@@ -16,18 +24,15 @@ interface Props {
 }
 
 export default function ScanScreen({ allergens, onResult, isOnline = true }: Props) {
-  const [loading,     setLoading]     = useState(false);
-  const [previewUri,  setPreviewUri]  = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const activeNames = allergens.filter(a => a.enabled).map(a => a.name);
 
-  // Resize to max 1500px on longest side and compress to 0.6 quality before sending.
-  // Keeps ingredient text readable while significantly reducing token cost.
   const compressImage = async (uri: string): Promise<string> => {
-    const MAX_DIMENSION = 1500;
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: MAX_DIMENSION } }],  // expo scales height proportionally
+      [{ resize: { width: 1500 } }],
       { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri;
@@ -37,29 +42,20 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
     setPreviewUri(null);
     setLoading(true);
     try {
-      // Validate file type
-      const extension = uri.split('.').pop()?.toLowerCase();
+      const extension = uri.split('?')[0].split('.').pop()?.toLowerCase();
       if (!extension || !['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp'].includes(extension)) {
         Alert.alert('Unsupported File', 'Please use a JPG, PNG, or HEIC image.');
         return;
       }
-
-      // Validate file size (max 15MB before base64 expansion)
       const fileInfo = await FileSystem.getInfoAsync(uri);
-      const MAX_BYTES = 15 * 1024 * 1024; // 15MB
+      const MAX_BYTES = 15 * 1024 * 1024;
       if (fileInfo.exists && (fileInfo as any).size > MAX_BYTES) {
-        Alert.alert(
-          'Image Too Large',
-          'The image is over 15MB. Please take a new photo at normal camera settings.',
-        );
+        Alert.alert('Image Too Large', 'The image is over 15MB. Please take a new photo at normal camera settings.');
         return;
       }
-
-      // Compress and resize before encoding — reduces OpenAI token cost ~50%
       const compressedUri = await compressImage(uri);
       const base64 = await FileSystem.readAsStringAsync(compressedUri, { encoding: 'base64' as any });
       const result = await analyzeApi.analyze(base64, activeNames);
-
       if (result.ingredientsVisible === false) {
         const messages: Record<string, string> = {
           blurry:     'The image is too blurry to read safely. Please retake a clearer, in-focus photo of the ingredient list.',
@@ -67,12 +63,9 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
           not_found:  'No ingredient list found. Please photograph the back or side of the packaging where ingredients are listed.',
         };
         const msg = messages[result.imageIssue ?? 'not_found'] ?? messages['not_found'];
-        Alert.alert('Cannot Read Label', msg, [
-          { text: 'Retake', onPress: () => {} },
-        ]);
+        Alert.alert('Cannot Read Label', msg, [{ text: 'Retake', onPress: () => {} }]);
         return;
       }
-
       onResult(result, uri);
     } catch (err) {
       Alert.alert('Analysis Error', `${err instanceof Error ? err.message : String(err)}`);
@@ -102,7 +95,6 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false });
     if (!result.canceled && result.assets[0]?.uri) {
       const { width, height } = result.assets[0];
-      // Block low-res camera photos — user can simply retake
       if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
         Alert.alert('Image Too Small', `The image is ${width}×${height}px. Please move closer to the label and retake.`);
         return;
@@ -117,7 +109,6 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
     if (!result.canceled && result.assets[0]?.uri) {
       const { width, height } = result.assets[0];
-      // Warn but allow — user picked this image intentionally and can't reshoot it
       if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
         const proceed = await new Promise<boolean>(resolve =>
           Alert.alert(
@@ -133,47 +124,44 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
     }
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#43a047" />
+        <ActivityIndicator size="large" color={PURPLE} />
         <Text style={styles.loadingText}>Analysing label...</Text>
         <Text style={styles.loadingSubtext}>This usually takes a few seconds</Text>
       </View>
     );
   }
 
-  // ── Image preview / confirmation ───────────────────────────────────────────
   if (previewUri) {
     return (
       <View style={styles.previewContainer}>
         <Text style={styles.previewTitle}>Check Your Photo</Text>
-        <Text style={styles.previewSubtitle}>
-          Make sure the full ingredient list is visible and in focus
-        </Text>
+        <Text style={styles.previewSubtitle}>Make sure the full ingredient list is visible and in focus</Text>
         <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="contain" />
-        <TouchableOpacity style={styles.confirmBtn} onPress={() => analyzeImage(previewUri)} disabled={loading}>
-          <Text style={styles.confirmBtnText}>✓  Looks Good — Analyse</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.retakeBtn} onPress={() => setPreviewUri(null)}>
-          <Text style={styles.retakeBtnText}>↩  Retake Photo</Text>
-        </TouchableOpacity>
+        <PressRing borderRadius={16} onPress={() => analyzeImage(previewUri)} disabled={loading} style={styles.confirmBtn}>
+          <Text style={styles.confirmBtnText}>Looks Good — Analyse</Text>
+        </PressRing>
+        <PressRing borderRadius={16} onPress={() => setPreviewUri(null)} style={styles.retakeBtn}>
+          <Text style={styles.retakeBtnText}>Retake Photo</Text>
+        </PressRing>
       </View>
     );
   }
 
-  // ── Scan options ───────────────────────────────────────────────────────────
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Scan a Label</Text>
       <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
-      <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.5 }]} onPress={takePhoto} disabled={loading}>
-        <Text style={styles.primaryBtnText}>📷  Take Photo</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={[styles.secondaryBtn, loading && { opacity: 0.5 }]} onPress={pickImage} disabled={loading}>
-        <Text style={styles.secondaryBtnText}>🖼️  Upload from Library</Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        <PressRing borderRadius={18} onPress={takePhoto} disabled={loading} style={[styles.primaryBtn, loading && { opacity: 0.5 }]}>
+          <Text style={styles.primaryBtnText}>Take Photo</Text>
+        </PressRing>
+        <PressRing borderRadius={18} onPress={pickImage} disabled={loading} style={[styles.secondaryBtn, loading && { opacity: 0.5 }]}>
+          <Text style={styles.secondaryBtnText}>Upload from Library</Text>
+        </PressRing>
+      </View>
       <View style={styles.hints}>
         <Text style={styles.hintsTitle}>For best results:</Text>
         <Text style={styles.hintItem}>• Photograph the full ingredient list</Text>
@@ -186,27 +174,26 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
 }
 
 const styles = StyleSheet.create({
-  container:        { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f8fafc' },
-  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-  title:            { fontSize: 24, fontWeight: '800', color: '#1e293b', marginBottom: 8 },
-  subtitle:         { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 32, lineHeight: 20 },
-  loadingText:      { marginTop: 16, fontSize: 16, color: '#64748b', fontWeight: '600' },
-  loadingSubtext:   { marginTop: 6, fontSize: 13, color: '#94a3b8' },
-  primaryBtn:       { width: '100%', backgroundColor: '#43a047', borderRadius: 18, paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
-  primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: '#e2e8f0', marginBottom: 28 },
-  secondaryBtnText: { color: '#475569', fontWeight: '700', fontSize: 16 },
-  hints:            { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: '#43a047' },
-  hintsTitle:       { fontSize: 13, fontWeight: '700', color: '#1e293b', marginBottom: 8 },
-  hintItem:         { fontSize: 13, color: '#475569', lineHeight: 22 },
-
-  // Preview
-  previewContainer: { flex: 1, backgroundColor: '#0f172a', padding: 20, paddingTop: 52 },
+  container:        { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  title:            { fontSize: 28, fontWeight: '700', color: BLACK, marginBottom: 8, letterSpacing: -0.4 },
+  subtitle:         { fontSize: 15, fontWeight: '400', color: GRAY, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  loadingText:      { marginTop: 16, fontSize: 16, color: GRAY, fontWeight: '600' },
+  loadingSubtext:   { marginTop: 6, fontSize: 13, color: MUTED },
+  actions:          { width: '100%', gap: 14, marginBottom: 28 },
+  primaryBtn:       { width: '100%', backgroundColor: PURPLE, borderRadius: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center' },
+  primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 17 },
+  secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: BORDER },
+  secondaryBtnText: { color: BLACK, fontWeight: '700', fontSize: 17 },
+  hints:            { width: '100%', backgroundColor: PURPLE_LIGHT, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: PURPLE },
+  hintsTitle:       { fontSize: 13, fontWeight: '700', color: '#4C1D95', marginBottom: 8 },
+  hintItem:         { fontSize: 13, color: '#5B21B6', lineHeight: 22 },
+  previewContainer: { flex: 1, backgroundColor: '#0A0A0A', padding: 20, paddingTop: 52 },
   previewTitle:     { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 6 },
-  previewSubtitle:  { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 16, lineHeight: 18 },
+  previewSubtitle:  { fontSize: 13, color: MUTED, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   previewImage:     { width: '100%', flex: 1, borderRadius: 16, marginBottom: 16 },
-  confirmBtn:       { backgroundColor: '#43a047', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
+  confirmBtn:       { backgroundColor: PURPLE, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
   confirmBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
-  retakeBtn:        { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  retakeBtnText:    { color: '#cbd5e1', fontWeight: '700', fontSize: 16 },
+  retakeBtn:        { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  retakeBtnText:    { color: MUTED, fontWeight: '700', fontSize: 16 },
 });
