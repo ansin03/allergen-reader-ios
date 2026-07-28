@@ -7,7 +7,6 @@ import { SEVERITY_CONFIG } from '../constants';
 import PressRing from '../components/PressRing';
 import FadeIn from '../components/FadeIn';
 import Pop from '../components/Pop';
-import CountUp from '../components/CountUp';
 import { COLORS, GRADIENTS, RADIUS, SHADOW, glow } from '../theme';
 
 const PURPLE = COLORS.purple;
@@ -108,28 +107,6 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
         </PressRing>
       </FadeIn>
 
-
-      {/* Stat strip */}
-      <FadeIn delay={60} style={styles.statRow}>
-        <View style={styles.stat}>
-          <CountUp value={active.length} style={styles.statNumber} delay={220} />
-          <Text style={styles.statLabel}>Active alerts</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <CountUp value={history.length} style={styles.statNumber} delay={320} />
-          <Text style={styles.statLabel}>Scans</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <CountUp
-            value={history.filter(h => h.safetyRating === 'danger').length}
-            style={[styles.statNumber, { color: COLORS.danger }]}
-            delay={420}
-          />
-          <Text style={styles.statLabel}>Flagged</Text>
-        </View>
-      </FadeIn>
 
       {/* Hero Scan Button */}
       <FadeIn delay={120}>
@@ -269,12 +246,6 @@ const styles = StyleSheet.create({
   headline:               { fontSize: 32, fontWeight: '800', color: BLACK, letterSpacing: -0.8 },
   shieldBadge:            { width: 46, height: 46, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...SHADOW.card },
   shieldEmoji:            { fontSize: 24 },
-
-  statRow:                { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: RADIUS.lg, paddingVertical: 16, marginBottom: 16, ...SHADOW.card },
-  stat:                   { flex: 1, alignItems: 'center' },
-  statNumber:             { fontSize: 26, fontWeight: '800', color: PURPLE, letterSpacing: -0.5 },
-  statLabel:              { fontSize: 11, fontWeight: '600', color: MUTED, marginTop: 2, letterSpacing: 0.3 },
-  statDivider:            { width: 1, height: 28, backgroundColor: BORDER },
 
   heroCta:                { borderRadius: RADIUS.xl, overflow: 'hidden', marginBottom: 16 },
   heroGradient:           { padding: 22, overflow: 'hidden' },
