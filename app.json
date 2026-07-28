@@ -2,7 +2,7 @@
   "expo": {
     "name": "EatSurely AI",
     "slug": "eatsurely-ai",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Food Allergen Scanner",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.eatsurely.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSCameraUsageDescription": "EatSurely AI needs camera access to scan food ingredient labels.",
         "NSPhotoLibraryUsageDescription": "EatSurely AI needs photo access to analyze food ingredient labels from your library.",
