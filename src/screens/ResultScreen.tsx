@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { ScanResult, Allergen, DetectedAllergen } from '../types';
 import PressRing from '../components/PressRing';
+import FadeIn from '../components/FadeIn';
 
 const PURPLE = '#6D28D9';
 const BLACK = '#111827';
@@ -115,6 +117,26 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
     : 'safe';
   const cfg = RATING_CONFIG[rating];
 
+  // Spring the verdict card in. Declared before the early return below so the
+  // hook order stays stable across renders.
+  const intro = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(intro, { toValue: 1, speed: 12, bounciness: 8, useNativeDriver: true }).start();
+  }, [intro]);
+
+  // Let the verdict land physically, before the user has read a word of it.
+  useEffect(() => {
+    if (rating === 'unknown') return; // ScanScreen already signalled this case
+    Haptics.notificationAsync(
+      rating === 'danger'  ? Haptics.NotificationFeedbackType.Error
+      : rating === 'warning' ? Haptics.NotificationFeedbackType.Warning
+      : Haptics.NotificationFeedbackType.Success,
+    );
+  }, [rating]);
+
+  const cardScale   = intro.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const cardOpacity = intro.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+
   if (rating === 'unknown') {
     const unknownConfig = {
       blurry:     { emoji: '📷', title: 'Photo Too Blurry', text: 'The image is not clear enough to safely read the ingredient list. Please retake a sharp, in-focus photo.' },
@@ -137,14 +159,20 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={[styles.ratingCard, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
+      <Animated.View
+        style={[
+          styles.ratingCard,
+          { backgroundColor: cfg.bg, borderColor: cfg.border },
+          { opacity: cardOpacity, transform: [{ scale: cardScale }] },
+        ]}
+      >
         {imageUri && <Image source={{ uri: imageUri }} style={styles.scannedImage} />}
         <Text style={styles.ratingEmoji}>{cfg.emoji}</Text>
         <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
-      </View>
+      </Animated.View>
 
       {allDetected.length > 0 && (
-        <View style={[styles.section, styles.dangerSection]}>
+        <FadeIn delay={120} style={[styles.section, styles.dangerSection]}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionIcon}>🚨</Text>
             <View>
@@ -175,11 +203,11 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
               <Text style={styles.fatalNoteText}>⚠️ This product contains a life-threatening allergen. Do not consume.</Text>
             </View>
           )}
-        </View>
+        </FadeIn>
       )}
 
       {filteredTrace.length > 0 && (
-        <View style={[styles.section, styles.warningSection]}>
+        <FadeIn delay={190} style={[styles.section, styles.warningSection]}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionIcon}>⚠️</Text>
             <View>
@@ -193,25 +221,27 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
               <Text style={styles.traceWarning}>{t.warning}</Text>
             </View>
           ))}
-        </View>
+        </FadeIn>
       )}
 
       {result.ingredients.length > 0 && (
-        <View style={styles.section}>
+        <FadeIn delay={260} style={styles.section}>
           <Text style={styles.sectionTitle}>Ingredients</Text>
           <Text style={styles.ingredients}>
             {highlightIngredients(result.ingredients, allDetected)}
           </Text>
-        </View>
+        </FadeIn>
       )}
 
-      <PressRing borderRadius={18} onPress={onScanAgain} style={styles.scanAgainBtn}>
-        <Text style={styles.scanAgainText}>Scan Another</Text>
-      </PressRing>
+      <FadeIn delay={330}>
+        <PressRing borderRadius={18} onPress={onScanAgain} style={styles.scanAgainBtn}>
+          <Text style={styles.scanAgainText}>Scan Another</Text>
+        </PressRing>
 
-      <Text style={styles.footerDisclaimer}>
-        Results are based on image analysis and may not be complete. Always check the product label before consuming.
-      </Text>
+        <Text style={styles.footerDisclaimer}>
+          Results are based on image analysis and may not be complete. Always check the product label before consuming.
+        </Text>
+      </FadeIn>
     </ScrollView>
   );
 }

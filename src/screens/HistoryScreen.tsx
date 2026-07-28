@@ -5,6 +5,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { HistoryItem } from '../types';
 import PressRing from '../components/PressRing';
+import FadeIn from '../components/FadeIn';
 
 const PURPLE = '#6D28D9';
 const BLACK = '#111827';
@@ -111,28 +112,31 @@ export default function HistoryScreen({ history, onViewItem, onClearHistory, onS
       )}
 
       <ScrollView contentContainerStyle={styles.list}>
-        {filtered.map(item => {
+        {filtered.map((item, i) => {
           const safetyRating = item.safetyRating in RATING_BADGE ? item.safetyRating : 'unknown';
           const badge = RATING_BADGE[safetyRating];
           const detectedAllergens = Array.isArray(item.detectedAllergens) ? item.detectedAllergens : [];
           const count = detectedAllergens.length;
           return (
-            <PressRing key={item.id} borderRadius={16} onPress={() => onViewItem(item)} style={styles.item}>
-              {item.imageUrl
-                ? <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-                : <View style={styles.itemImagePlaceholder}><Text style={{ fontSize: 24 }}>🏷️</Text></View>
-              }
-              <View style={styles.itemInfo}>
-                <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                  <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
+            // Cascade the rows in, but cap the delay so long histories aren't slow to appear.
+            <FadeIn key={item.id} delay={Math.min(i * 45, 400)}>
+              <PressRing borderRadius={16} onPress={() => onViewItem(item)} style={styles.item}>
+                {item.imageUrl
+                  ? <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+                  : <View style={styles.itemImagePlaceholder}><Text style={{ fontSize: 24 }}>🏷️</Text></View>
+                }
+                <View style={styles.itemInfo}>
+                  <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
+                  </View>
+                  <Text style={styles.itemName} numberOfLines={1}>
+                    {item.productName || (count > 0 ? `${count} allergen${count !== 1 ? 's' : ''} found` : 'No allergens detected')}
+                  </Text>
+                  <Text style={styles.itemDate}>{formatDate(item.timestamp ?? Date.now())}</Text>
                 </View>
-                <Text style={styles.itemName} numberOfLines={1}>
-                  {item.productName || (count > 0 ? `${count} allergen${count !== 1 ? 's' : ''} found` : 'No allergens detected')}
-                </Text>
-                <Text style={styles.itemDate}>{formatDate(item.timestamp ?? Date.now())}</Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </PressRing>
+                <Text style={styles.chevron}>›</Text>
+              </PressRing>
+            </FadeIn>
           );
         })}
       </ScrollView>

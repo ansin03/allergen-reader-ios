@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator,
+  View, Text, StyleSheet,
   Alert, ScrollView, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Haptics from 'expo-haptics';
 import { Allergen, ScanResult } from '../types';
 import { analyzeApi } from '../services/api';
 import PressRing from '../components/PressRing';
+import FadeIn from '../components/FadeIn';
+import ScanningIndicator from '../components/ScanningIndicator';
 
 const PURPLE = '#6D28D9';
 const PURPLE_LIGHT = '#EDE9FE';
@@ -63,11 +66,13 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
           not_found:  'No ingredient list found. Please photograph the back or side of the packaging where ingredients are listed.',
         };
         const msg = messages[result.imageIssue ?? 'not_found'] ?? messages['not_found'];
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert('Cannot Read Label', msg, [{ text: 'Retake', onPress: () => {} }]);
         return;
       }
       onResult(result, uri);
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Analysis Error', `${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
@@ -99,6 +104,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
         Alert.alert('Image Too Small', `The image is ${width}×${height}px. Please move closer to the label and retake.`);
         return;
       }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setPreviewUri(result.assets[0].uri);
     }
   };
@@ -120,6 +126,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
         );
         if (!proceed) return;
       }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setPreviewUri(result.assets[0].uri);
     }
   };
@@ -127,9 +134,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={PURPLE} />
-        <Text style={styles.loadingText}>Analysing label...</Text>
-        <Text style={styles.loadingSubtext}>This usually takes a few seconds</Text>
+        <ScanningIndicator />
       </View>
     );
   }
@@ -152,23 +157,27 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Scan a Label</Text>
-      <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
-      <View style={styles.actions}>
+      <FadeIn>
+        <Text style={styles.title}>Scan a Label</Text>
+      </FadeIn>
+      <FadeIn delay={70}>
+        <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
+      </FadeIn>
+      <FadeIn delay={140} style={styles.actions}>
         <PressRing borderRadius={18} onPress={takePhoto} disabled={loading} style={[styles.primaryBtn, loading && { opacity: 0.5 }]}>
           <Text style={styles.primaryBtnText}>Take Photo</Text>
         </PressRing>
         <PressRing borderRadius={18} onPress={pickImage} disabled={loading} style={[styles.secondaryBtn, loading && { opacity: 0.5 }]}>
           <Text style={styles.secondaryBtnText}>Upload from Library</Text>
         </PressRing>
-      </View>
-      <View style={styles.hints}>
+      </FadeIn>
+      <FadeIn delay={220} style={styles.hints}>
         <Text style={styles.hintsTitle}>For best results:</Text>
         <Text style={styles.hintItem}>• Photograph the full ingredient list</Text>
         <Text style={styles.hintItem}>• Hold steady for a sharp, clear image</Text>
         <Text style={styles.hintItem}>• Ensure good lighting — avoid shadows</Text>
         <Text style={styles.hintItem}>• Capture the entire list, not just part of it</Text>
-      </View>
+      </FadeIn>
     </ScrollView>
   );
 }
@@ -178,8 +187,6 @@ const styles = StyleSheet.create({
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   title:            { fontSize: 28, fontWeight: '700', color: BLACK, marginBottom: 8, letterSpacing: -0.4 },
   subtitle:         { fontSize: 15, fontWeight: '400', color: GRAY, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  loadingText:      { marginTop: 16, fontSize: 16, color: GRAY, fontWeight: '600' },
-  loadingSubtext:   { marginTop: 6, fontSize: 13, color: MUTED },
   actions:          { width: '100%', gap: 14, marginBottom: 28 },
   primaryBtn:       { width: '100%', backgroundColor: PURPLE, borderRadius: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center' },
   primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 17 },

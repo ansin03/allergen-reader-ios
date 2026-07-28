@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Animated, View, TouchableOpacity, TouchableOpacityProps, StyleProp, ViewStyle } from 'react-native';
+import { Animated, TouchableOpacity, TouchableOpacityProps, StyleProp, ViewStyle } from 'react-native';
 
 const RING_COLOR = '#6D28D9';
 
@@ -14,19 +14,26 @@ interface PressRingProps extends TouchableOpacityProps {
 
 export default function PressRing({ children, borderRadius = 16, style, containerStyle, onPressIn, onPressOut, ...rest }: PressRingProps) {
   const ringOpacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = (e: any) => {
-    Animated.timing(ringOpacity, { toValue: 1, duration: 80, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(ringOpacity, { toValue: 1, duration: 80, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 0.97, speed: 45, bounciness: 0, useNativeDriver: true }),
+    ]).start();
     onPressIn?.(e);
   };
 
   const handlePressOut = (e: any) => {
-    Animated.timing(ringOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(ringOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, speed: 20, bounciness: 8, useNativeDriver: true }),
+    ]).start();
     onPressOut?.(e);
   };
 
   return (
-    <View style={[{ borderRadius: borderRadius + 4 }, containerStyle]}>
+    <Animated.View style={[{ borderRadius: borderRadius + 4 }, containerStyle, { transform: [{ scale }] }]}>
       <Animated.View
         pointerEvents="none"
         style={{
@@ -47,6 +54,6 @@ export default function PressRing({ children, borderRadius = 16, style, containe
       >
         {children}
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }

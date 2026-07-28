@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Allergen, HistoryItem } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
 import PressRing from '../components/PressRing';
+import FadeIn from '../components/FadeIn';
 
 const PURPLE = '#6D28D9';
 const PURPLE_LIGHT = '#EDE9FE';
@@ -93,7 +94,7 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
       </Modal>
 
       {/* Header */}
-      <View style={styles.header}>
+      <FadeIn style={styles.header}>
         <View>
           <Text style={styles.greeting}>{greeting()}</Text>
           <Text style={styles.headline}>{userName ? userName : 'Welcome'}</Text>
@@ -101,10 +102,11 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
         <PressRing borderRadius={14} onPress={() => setShowAbout(true)} style={styles.shieldBadge}>
           <Text style={styles.shieldEmoji}>🛡️</Text>
         </PressRing>
-      </View>
+      </FadeIn>
 
 
       {/* Hero Scan Button */}
+      <FadeIn delay={80}>
       <PressRing
         borderRadius={22}
         onPress={() => { onStartScan(); navigation.navigate('Scan'); }}
@@ -124,9 +126,10 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
           <Text style={styles.heroPillText}>Open Scanner →</Text>
         </View>
       </PressRing>
+      </FadeIn>
 
       {/* Your Allergen List */}
-      <View style={styles.card}>
+      <FadeIn delay={160} style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
             <Text style={styles.cardTitle}>Your Allergen List</Text>
@@ -155,11 +158,11 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
             ))}
           </View>
         )}
-      </View>
+      </FadeIn>
 
       {/* Last Scan */}
       {recent && (
-        <View style={styles.card}>
+        <FadeIn delay={230} style={styles.card}>
           <View style={styles.cardHeader}>
             <View>
               <Text style={styles.cardTitle}>Last Scan</Text>
@@ -199,16 +202,16 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
             </View>
             <Text style={styles.chevron}>›</Text>
           </PressRing>
-        </View>
+        </FadeIn>
       )}
 
       {/* Tip */}
-      <View style={styles.tip}>
+      <FadeIn delay={300} style={styles.tip}>
         <Text style={styles.tipEmoji}>💡</Text>
         <Text style={styles.tipText}>
           The app flags ingredients commonly associated with your allergens — including scientific names like "casein" and "whey" for Dairy.
         </Text>
-      </View>
+      </FadeIn>
 
     </ScrollView>
   );
