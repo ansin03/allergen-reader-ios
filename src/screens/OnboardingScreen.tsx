@@ -6,6 +6,10 @@ import {
 import { Allergen, AllergenSeverity, Profile } from '../types';
 import { DEFAULT_ALLERGENS, SEVERITY_CONFIG } from '../constants';
 import PressRing from '../components/PressRing';
+import GradientButton from '../components/GradientButton';
+import Pop from '../components/Pop';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, GRADIENTS, glow } from '../theme';
 
 const PURPLE = '#6D28D9';
 const PURPLE_LIGHT = '#EDE9FE';
@@ -63,14 +67,18 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
         {step === 0 && (
           <View style={styles.section}>
-            <View style={styles.logoBox}><Text style={styles.logoEmoji}>🛡️</Text></View>
+            <LinearGradient colors={GRADIENTS.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoBox}>
+              <Text style={styles.logoEmoji}>🛡️</Text>
+            </LinearGradient>
             <Text style={styles.mainTitle}>EatSurely</Text>
             <Text style={styles.mainSubtitle}>Food Allergen Scanner — scan any label and know instantly if it contains your allergens.</Text>
-            {FEATURES.map(([icon, text]) => (
-              <View key={String(text)} style={styles.featureRow}>
-                <Text style={styles.featureIcon}>{icon}</Text>
-                <Text style={styles.featureText}>{text}</Text>
-              </View>
+            {FEATURES.map(([icon, text], i) => (
+              <Pop key={String(text)} delay={140 + i * 90} from={0.9}>
+                <View style={styles.featureRow}>
+                  <Text style={styles.featureIcon}>{icon}</Text>
+                  <Text style={styles.featureText}>{text}</Text>
+                </View>
+              </Pop>
             ))}
           </View>
         )}
@@ -168,18 +176,20 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </PressRing>
         )}
         {step < 3 && (
-          <PressRing borderRadius={16} containerStyle={styles.flexOne}
+          <GradientButton
+            containerStyle={styles.flexOne}
+            label={step === 2 ? 'Finish Setup  →' : 'Next  →'}
+            disabled={!canNext}
             onPress={() => canNext && setStep(s => s + 1)}
-            style={[styles.nextBtn, !canNext && styles.nextBtnDisabled]}>
-            <Text style={styles.nextBtnText}>{step === 2 ? 'Finish Setup' : 'Next'} →</Text>
-          </PressRing>
+          />
         )}
         {step === 3 && (
-          <PressRing borderRadius={16} containerStyle={styles.flexOne}
+          <GradientButton
+            containerStyle={styles.flexOne}
+            label="Start Scanning"
+            disabled={!disclaimerAccepted}
             onPress={() => disclaimerAccepted && complete()}
-            style={[styles.startBtn, !disclaimerAccepted && styles.nextBtnDisabled]}>
-            <Text style={styles.nextBtnText}>Start Scanning!</Text>
-          </PressRing>
+          />
         )}
       </View>
     </View>
@@ -195,7 +205,7 @@ const styles = StyleSheet.create({
   content:              { flex: 1 },
   contentInner:         { padding: 20, paddingBottom: 8 },
   section:              { gap: 12 },
-  logoBox:              { width: 80, height: 80, borderRadius: 24, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  logoBox:              { width: 88, height: 88, borderRadius: 28, ...glow(COLORS.purpleDeep, 0.45), alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   logoEmoji:            { fontSize: 40 },
   mainTitle:            { fontSize: 34, fontWeight: '700', color: BLACK, textAlign: 'center', letterSpacing: -0.5 },
   mainSubtitle:         { fontSize: 15, fontWeight: '400', color: GRAY, textAlign: 'center', lineHeight: 22 },

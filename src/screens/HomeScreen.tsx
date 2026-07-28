@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, Modal } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Allergen, HistoryItem } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
 import PressRing from '../components/PressRing';
 import FadeIn from '../components/FadeIn';
+import Pop from '../components/Pop';
+import CountUp from '../components/CountUp';
+import { COLORS, GRADIENTS, RADIUS, SHADOW, glow } from '../theme';
 
-const PURPLE = '#6D28D9';
-const PURPLE_LIGHT = '#EDE9FE';
-const BLACK = '#111827';
-const GRAY = '#6B7280';
-const MUTED = '#9CA3AF';
-const BORDER = '#E5E7EB';
-const SURFACE = '#F9FAFB';
+const PURPLE = COLORS.purple;
+const PURPLE_LIGHT = COLORS.purpleLight;
+const BLACK = COLORS.black;
+const GRAY = COLORS.gray;
+const MUTED = COLORS.muted;
+const BORDER = COLORS.border;
+const SURFACE = COLORS.surface;
 
 interface Props {
   history: HistoryItem[];
@@ -105,27 +109,63 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
       </FadeIn>
 
 
+      {/* Stat strip */}
+      <FadeIn delay={60} style={styles.statRow}>
+        <View style={styles.stat}>
+          <CountUp value={active.length} style={styles.statNumber} delay={220} />
+          <Text style={styles.statLabel}>Active alerts</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.stat}>
+          <CountUp value={history.length} style={styles.statNumber} delay={320} />
+          <Text style={styles.statLabel}>Scans</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.stat}>
+          <CountUp
+            value={history.filter(h => h.safetyRating === 'danger').length}
+            style={[styles.statNumber, { color: COLORS.danger }]}
+            delay={420}
+          />
+          <Text style={styles.statLabel}>Flagged</Text>
+        </View>
+      </FadeIn>
+
       {/* Hero Scan Button */}
-      <FadeIn delay={80}>
-      <PressRing
-        borderRadius={22}
-        onPress={() => { onStartScan(); navigation.navigate('Scan'); }}
-        style={styles.heroCta}
-      >
-        <View style={styles.heroContent}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroEyebrow}>AI-POWERED</Text>
-            <Text style={styles.heroTitle}>Scan a Label</Text>
-            <Text style={styles.heroSubtitle}>Photo or upload — results in seconds</Text>
-          </View>
-          <View style={styles.heroIconCircle}>
-            <Text style={styles.heroIcon}>📷</Text>
-          </View>
-        </View>
-        <View style={styles.heroPillBtn}>
-          <Text style={styles.heroPillText}>Open Scanner →</Text>
-        </View>
-      </PressRing>
+      <FadeIn delay={120}>
+        <PressRing
+          borderRadius={RADIUS.xl}
+          containerStyle={glow(COLORS.purpleDeep, 0.45, 22)}
+          onPress={() => { onStartScan(); navigation.navigate('Scan'); }}
+          style={styles.heroCta}
+        >
+          <LinearGradient
+            colors={GRADIENTS.hero}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradient}
+          >
+            {/* Decorative light blooms */}
+            <View style={styles.heroBlobA} pointerEvents="none" />
+            <View style={styles.heroBlobB} pointerEvents="none" />
+
+            <View style={styles.heroContent}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.heroEyebrowPill}>
+                  <Text style={styles.heroEyebrow}>AI-POWERED</Text>
+                </View>
+                <Text style={styles.heroTitle}>Scan a Label</Text>
+                <Text style={styles.heroSubtitle}>Photo or upload — results in seconds</Text>
+              </View>
+              <View style={styles.heroIconCircle}>
+                <Text style={styles.heroIcon}>📷</Text>
+              </View>
+            </View>
+            <View style={styles.heroPillBtn}>
+              <Text style={styles.heroPillText}>Open Scanner →</Text>
+            </View>
+          </LinearGradient>
+        </PressRing>
       </FadeIn>
 
       {/* Your Allergen List */}
@@ -150,11 +190,14 @@ export default function HomeScreen({ history, allergens, userName, onStartScan, 
           </PressRing>
         ) : (
           <View style={styles.chipGrid}>
-            {active.map(a => (
-              <View key={a.id} style={[styles.chip, { backgroundColor: SEVERITY_CONFIG[a.severity].color }]}>
-                <Text style={styles.chipEmoji}>{a.emoji}</Text>
-                <Text style={[styles.chipText, { color: SEVERITY_CONFIG[a.severity].textColor }]}>{a.name}</Text>
-              </View>
+            {active.map((a, i) => (
+              // Cap the stagger so a long allergen list still fills in briskly.
+              <Pop key={a.id} delay={260 + Math.min(i * 55, 500)}>
+                <View style={[styles.chip, { backgroundColor: SEVERITY_CONFIG[a.severity].color }]}>
+                  <Text style={styles.chipEmoji}>{a.emoji}</Text>
+                  <Text style={[styles.chipText, { color: SEVERITY_CONFIG[a.severity].textColor }]}>{a.name}</Text>
+                </View>
+              </Pop>
             ))}
           </View>
         )}
@@ -221,27 +264,33 @@ const styles = StyleSheet.create({
   container:              { flex: 1, backgroundColor: SURFACE },
   content:                { padding: 20, paddingTop: 56, paddingBottom: 40 },
 
-  header:                 { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  greeting:               { fontSize: 13, fontWeight: '500', color: GRAY, marginBottom: 2 },
-  headline:               { fontSize: 26, fontWeight: '800', color: BLACK, letterSpacing: -0.5 },
-  shieldBadge:            { width: 46, height: 46, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  header:                 { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  greeting:               { fontSize: 13, fontWeight: '600', color: MUTED, marginBottom: 2, letterSpacing: 0.3, textTransform: 'uppercase' },
+  headline:               { fontSize: 32, fontWeight: '800', color: BLACK, letterSpacing: -0.8 },
+  shieldBadge:            { width: 46, height: 46, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...SHADOW.card },
   shieldEmoji:            { fontSize: 24 },
 
-  summaryPill:            { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, marginBottom: 16, gap: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  summaryText:            { fontSize: 13, fontWeight: '600', color: GRAY },
-  summaryDivider:         { width: 1, height: 14, backgroundColor: BORDER },
+  statRow:                { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: RADIUS.lg, paddingVertical: 16, marginBottom: 16, ...SHADOW.card },
+  stat:                   { flex: 1, alignItems: 'center' },
+  statNumber:             { fontSize: 26, fontWeight: '800', color: PURPLE, letterSpacing: -0.5 },
+  statLabel:              { fontSize: 11, fontWeight: '600', color: MUTED, marginTop: 2, letterSpacing: 0.3 },
+  statDivider:            { width: 1, height: 28, backgroundColor: BORDER },
 
-  heroCta:                { borderRadius: 22, padding: 22, marginBottom: 14, backgroundColor: PURPLE },
+  heroCta:                { borderRadius: RADIUS.xl, overflow: 'hidden', marginBottom: 16 },
+  heroGradient:           { padding: 22, overflow: 'hidden' },
+  heroBlobA:              { position: 'absolute', top: -50, right: -30, width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.13)' },
+  heroBlobB:              { position: 'absolute', bottom: -60, left: -40, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.08)' },
   heroContent:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  heroEyebrow:            { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.65)', letterSpacing: 1.5, marginBottom: 6 },
-  heroTitle:              { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
-  heroSubtitle:           { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
-  heroIconCircle:         { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  heroIcon:               { fontSize: 28 },
-  heroPillBtn:            { alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
-  heroPillText:           { color: PURPLE, fontWeight: '700', fontSize: 14 },
+  heroEyebrowPill:        { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10 },
+  heroEyebrow:            { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 1.2 },
+  heroTitle:              { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.6, marginBottom: 4 },
+  heroSubtitle:           { fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 18 },
+  heroIconCircle:         { width: 60, height: 60, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  heroIcon:               { fontSize: 30 },
+  heroPillBtn:            { alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: RADIUS.md, paddingHorizontal: 18, paddingVertical: 11 },
+  heroPillText:           { color: COLORS.purpleDeep, fontWeight: '800', fontSize: 14 },
 
-  card:                   { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  card:                   { backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 18, marginBottom: 12, ...SHADOW.card },
   cardHeader:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   cardTitle:              { fontSize: 15, fontWeight: '700', color: BLACK },
   cardSubtitle:           { fontSize: 12, color: GRAY, marginTop: 2 },

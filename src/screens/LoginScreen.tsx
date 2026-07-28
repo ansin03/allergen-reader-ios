@@ -3,15 +3,17 @@ import {
   View, Text, TextInput, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { authApi, setToken } from '../services/api';
 import PressRing from '../components/PressRing';
+import FadeIn from '../components/FadeIn';
+import { COLORS, GRADIENTS, glow } from '../theme';
 
-const PURPLE = '#6D28D9';
-const PURPLE_DARK = '#2E1065';
-const BLACK = '#111827';
-const GRAY = '#6B7280';
-const MUTED = '#9CA3AF';
-const BORDER = '#E5E7EB';
+const PURPLE = COLORS.purple;
+const BLACK = COLORS.black;
+const GRAY = COLORS.gray;
+const MUTED = COLORS.muted;
+const BORDER = COLORS.border;
 
 interface Props {
   onAuth: (name: string, email: string, hasOnboarded: boolean) => void;
@@ -19,6 +21,22 @@ interface Props {
 }
 
 type Screen = 'auth' | 'forgot' | 'reset';
+
+/** Gradient backdrop + light blooms, rendered behind each auth step. */
+function Backdrop() {
+  return (
+    <>
+      <LinearGradient
+        colors={GRADIENTS.night}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.auraTop} pointerEvents="none" />
+      <View style={styles.auraBottom} pointerEvents="none" />
+    </>
+  );
+}
 
 export default function LoginScreen({ onAuth, onGuest }: Props) {
   const [mode,           setMode]           = useState<'login' | 'signup'>('login');
@@ -87,6 +105,7 @@ export default function LoginScreen({ onAuth, onGuest }: Props) {
   if (screen === 'reset') {
     return (
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Backdrop />
         <ScrollView contentContainerStyle={styles.inner}>
           <View style={styles.logoBox}><Text style={styles.logoEmoji}>🔑</Text></View>
           <Text style={styles.title}>Reset Password</Text>
@@ -116,6 +135,7 @@ export default function LoginScreen({ onAuth, onGuest }: Props) {
   if (screen === 'forgot') {
     return (
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Backdrop />
         <ScrollView contentContainerStyle={styles.inner}>
           <View style={styles.logoBox}><Text style={styles.logoEmoji}>📧</Text></View>
           <Text style={styles.title}>Forgot Password</Text>
@@ -139,6 +159,7 @@ export default function LoginScreen({ onAuth, onGuest }: Props) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Backdrop />
       <ScrollView contentContainerStyle={styles.inner}>
         <View style={styles.logoBox}>
           <Text style={styles.logoEmoji}>🛡️</Text>
@@ -202,13 +223,16 @@ export default function LoginScreen({ onAuth, onGuest }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: PURPLE_DARK },
+  container:     { flex: 1, backgroundColor: COLORS.purpleDark },
+  flex:          { flex: 1 },
+  auraTop:       { position: 'absolute', top: -110, right: -90, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(139,92,246,0.30)' },
+  auraBottom:    { position: 'absolute', bottom: -140, left: -100, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(109,40,217,0.28)' },
   inner:         { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  logoBox:       { width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  logoEmoji:     { fontSize: 40 },
-  title:         { fontSize: 34, fontWeight: '700', color: '#fff', marginBottom: 4, letterSpacing: -0.5 },
-  subtitle:      { fontSize: 15, fontWeight: '400', color: 'rgba(255,255,255,0.6)', marginBottom: 32, letterSpacing: 0 },
-  card:          { width: '100%', backgroundColor: '#fff', borderRadius: 24, padding: 20 },
+  logoBox:       { width: 84, height: 84, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  logoEmoji:     { fontSize: 42 },
+  title:         { fontSize: 38, fontWeight: '800', color: '#fff', marginBottom: 4, letterSpacing: -1 },
+  subtitle:      { fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginBottom: 32, letterSpacing: 0.2 },
+  card:          { width: '100%', backgroundColor: '#fff', borderRadius: 26, padding: 22, ...glow('#000', 0.3, 24) },
   tabs:          { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 16, padding: 4, marginBottom: 20, gap: 4 },
   tabWrap:       { flex: 1 },
   tab:           { paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },

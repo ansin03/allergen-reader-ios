@@ -217,7 +217,25 @@ export default function App() {
         </View>
       )}
 
-      <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#6D28D9', headerShown: false, tabBarStyle: { paddingBottom: 4 } }}>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#6D28D9',
+          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+          tabBarStyle: {
+            paddingBottom: 4,
+            height: 88,
+            borderTopWidth: 0,
+            backgroundColor: '#fff',
+            shadowColor: '#4C1D95',
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: -4 },
+            elevation: 16,
+          },
+        }}
+      >
 
         <Tab.Screen name="Home" options={{ tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}>
           {() => (

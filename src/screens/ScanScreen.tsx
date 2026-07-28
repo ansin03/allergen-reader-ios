@@ -11,6 +11,7 @@ import { Allergen, ScanResult } from '../types';
 import { analyzeApi } from '../services/api';
 import PressRing from '../components/PressRing';
 import FadeIn from '../components/FadeIn';
+import GradientButton from '../components/GradientButton';
 import ScanningIndicator from '../components/ScanningIndicator';
 
 const PURPLE = '#6D28D9';
@@ -145,9 +146,12 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
         <Text style={styles.previewTitle}>Check Your Photo</Text>
         <Text style={styles.previewSubtitle}>Make sure the full ingredient list is visible and in focus</Text>
         <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="contain" />
-        <PressRing borderRadius={16} onPress={() => analyzeImage(previewUri)} disabled={loading} style={styles.confirmBtn}>
-          <Text style={styles.confirmBtnText}>Looks Good — Analyse</Text>
-        </PressRing>
+        <GradientButton
+          label="Looks Good — Analyse"
+          onPress={() => analyzeImage(previewUri)}
+          disabled={loading}
+          containerStyle={styles.confirmBtn}
+        />
         <PressRing borderRadius={16} onPress={() => setPreviewUri(null)} style={styles.retakeBtn}>
           <Text style={styles.retakeBtnText}>Retake Photo</Text>
         </PressRing>
@@ -164,9 +168,7 @@ export default function ScanScreen({ allergens, onResult, isOnline = true }: Pro
         <Text style={styles.subtitle}>Take a photo or upload an image of an ingredient label</Text>
       </FadeIn>
       <FadeIn delay={140} style={styles.actions}>
-        <PressRing borderRadius={18} onPress={takePhoto} disabled={loading} style={[styles.primaryBtn, loading && { opacity: 0.5 }]}>
-          <Text style={styles.primaryBtnText}>Take Photo</Text>
-        </PressRing>
+        <GradientButton label="Take Photo" onPress={takePhoto} disabled={loading} />
         <PressRing borderRadius={18} onPress={pickImage} disabled={loading} style={[styles.secondaryBtn, loading && { opacity: 0.5 }]}>
           <Text style={styles.secondaryBtnText}>Upload from Library</Text>
         </PressRing>
@@ -188,9 +190,7 @@ const styles = StyleSheet.create({
   title:            { fontSize: 28, fontWeight: '700', color: BLACK, marginBottom: 8, letterSpacing: -0.4 },
   subtitle:         { fontSize: 15, fontWeight: '400', color: GRAY, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
   actions:          { width: '100%', gap: 14, marginBottom: 28 },
-  primaryBtn:       { width: '100%', backgroundColor: PURPLE, borderRadius: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center' },
-  primaryBtnText:   { color: '#fff', fontWeight: '700', fontSize: 17 },
-  secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: BORDER },
+  secondaryBtn:     { width: '100%', backgroundColor: '#fff', borderRadius: 20, paddingVertical: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: BORDER },
   secondaryBtnText: { color: BLACK, fontWeight: '700', fontSize: 17 },
   hints:            { width: '100%', backgroundColor: PURPLE_LIGHT, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: PURPLE },
   hintsTitle:       { fontSize: 13, fontWeight: '700', color: '#4C1D95', marginBottom: 8 },
@@ -199,8 +199,7 @@ const styles = StyleSheet.create({
   previewTitle:     { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 6 },
   previewSubtitle:  { fontSize: 13, color: MUTED, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   previewImage:     { width: '100%', flex: 1, borderRadius: 16, marginBottom: 16 },
-  confirmBtn:       { backgroundColor: PURPLE, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
-  confirmBtnText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
+  confirmBtn:       { marginBottom: 10 },
   retakeBtn:        { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   retakeBtnText:    { color: MUTED, fontWeight: '700', fontSize: 16 },
 });

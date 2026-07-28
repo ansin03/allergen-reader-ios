@@ -1,9 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { ScanResult, Allergen, DetectedAllergen } from '../types';
 import PressRing from '../components/PressRing';
 import FadeIn from '../components/FadeIn';
+import CountUp from '../components/CountUp';
+import { GRADIENTS, RADIUS, glow } from '../theme';
 
 const PURPLE = '#6D28D9';
 const BLACK = '#111827';
@@ -37,10 +40,10 @@ interface Props {
 }
 
 const RATING_CONFIG = {
-  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'No Flagged Ingredients', emoji: '✅' },
-  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',         emoji: '⚠️' },
-  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Ingredients Flagged',     emoji: '🚨' },
-  unknown: { bg: '#F9FAFB', border: BORDER,    text: GRAY,      label: 'Ingredients Not Found',   emoji: '🔍' },
+  safe:    { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'No Flagged Ingredients', emoji: '✅', gradient: 'safe'    as const, caption: 'Nothing in this product matches your allergen profile.' },
+  warning: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Possible Traces',         emoji: '⚠️', gradient: 'warning' as const, caption: 'Not an ingredient, but cross-contamination is possible.' },
+  danger:  { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', label: 'Ingredients Flagged',     emoji: '🚨', gradient: 'danger'  as const, caption: 'This product contains ingredients you react to.' },
+  unknown: { bg: '#F9FAFB', border: BORDER,    text: GRAY,      label: 'Ingredients Not Found',   emoji: '🔍', gradient: 'neutral' as const, caption: 'The ingredient list could not be read from this photo.' },
 };
 
 function matchesWholeWord(ingredientText: string, allergenName: string): boolean {
@@ -161,14 +164,43 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Animated.View
         style={[
-          styles.ratingCard,
-          { backgroundColor: cfg.bg, borderColor: cfg.border },
+          styles.verdictWrap,
+          glow(GRADIENTS[cfg.gradient][1], 0.4, 22),
           { opacity: cardOpacity, transform: [{ scale: cardScale }] },
         ]}
       >
-        {imageUri && <Image source={{ uri: imageUri }} style={styles.scannedImage} />}
-        <Text style={styles.ratingEmoji}>{cfg.emoji}</Text>
-        <Text style={[styles.ratingLabel, { color: cfg.text }]}>{cfg.label}</Text>
+        <LinearGradient
+          colors={GRADIENTS[cfg.gradient]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.verdictCard}
+        >
+          <View style={styles.verdictBlob} pointerEvents="none" />
+
+          {imageUri && <Image source={{ uri: imageUri }} style={styles.scannedImage} />}
+
+          <Text style={styles.verdictEmoji}>{cfg.emoji}</Text>
+          <Text style={styles.verdictLabel}>{cfg.label}</Text>
+          <Text style={styles.verdictCaption}>{cfg.caption}</Text>
+
+          {/* Counts of what was actually found — no invented "safety score". */}
+          <View style={styles.verdictStats}>
+            <View style={styles.verdictStat}>
+              <CountUp value={allDetected.length} style={styles.verdictStatNum} delay={280} />
+              <Text style={styles.verdictStatLabel}>Flagged</Text>
+            </View>
+            <View style={styles.verdictStatDivider} />
+            <View style={styles.verdictStat}>
+              <CountUp value={filteredTrace.length} style={styles.verdictStatNum} delay={380} />
+              <Text style={styles.verdictStatLabel}>Trace risks</Text>
+            </View>
+            <View style={styles.verdictStatDivider} />
+            <View style={styles.verdictStat}>
+              <CountUp value={result.ingredients.length} style={styles.verdictStatNum} delay={480} />
+              <Text style={styles.verdictStatLabel}>Ingredients</Text>
+            </View>
+          </View>
+        </LinearGradient>
       </Animated.View>
 
       {allDetected.length > 0 && (
@@ -249,10 +281,18 @@ export default function ResultScreen({ result, allergens, imageUri, onScanAgain 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: '#fff' },
   content:            { padding: 20, paddingBottom: 40 },
-  ratingCard:         { borderWidth: 1.5, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 20, overflow: 'hidden' },
-  scannedImage:       { width: '100%', height: 160, borderRadius: 12, marginBottom: 16, resizeMode: 'cover' },
-  ratingEmoji:        { fontSize: 48, marginBottom: 8 },
-  ratingLabel:        { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  verdictWrap:        { borderRadius: RADIUS.xl, marginBottom: 20 },
+  verdictCard:        { borderRadius: RADIUS.xl, padding: 24, alignItems: 'center', overflow: 'hidden' },
+  verdictBlob:        { position: 'absolute', top: -70, right: -50, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,255,255,0.12)' },
+  scannedImage:       { width: '100%', height: 150, borderRadius: RADIUS.md, marginBottom: 18, resizeMode: 'cover' },
+  verdictEmoji:       { fontSize: 52, marginBottom: 10 },
+  verdictLabel:       { fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center', letterSpacing: -0.5 },
+  verdictCaption:     { fontSize: 13, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 6, lineHeight: 19, paddingHorizontal: 8 },
+  verdictStats:       { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', marginTop: 20, paddingTop: 18, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.25)' },
+  verdictStat:        { flex: 1, alignItems: 'center' },
+  verdictStatNum:     { fontSize: 24, fontWeight: '800', color: '#fff' },
+  verdictStatLabel:   { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  verdictStatDivider: { width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.25)' },
   section:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: BORDER },
   dangerSection:      { backgroundColor: '#fff1f2', borderColor: '#fca5a5' },
   warningSection:     { backgroundColor: '#fffbeb', borderColor: '#fcd34d' },

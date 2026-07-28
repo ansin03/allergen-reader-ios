@@ -6,6 +6,8 @@ import {
 import { Allergen, AllergenSeverity } from '../types';
 import { SEVERITY_CONFIG } from '../constants';
 import PressRing from '../components/PressRing';
+import GradientButton from '../components/GradientButton';
+import FadeIn from '../components/FadeIn';
 
 const PURPLE = '#6D28D9';
 const PURPLE_LIGHT = '#EDE9FE';
@@ -75,7 +77,7 @@ export default function SettingsScreen({ allergens, onToggle, onAdd, onRemove, o
         </PressRing>
       )}
 
-      <Text style={styles.heading}>My Allergens</Text>
+      <FadeIn><Text style={styles.heading}>My Allergens</Text></FadeIn>
 
       {allergens.map(a => {
         const cfg = SEVERITY_CONFIG[a.severity];
@@ -112,9 +114,7 @@ export default function SettingsScreen({ allergens, onToggle, onAdd, onRemove, o
             </PressRing>
           ))}
         </View>
-        <PressRing borderRadius={12} onPress={handleAdd} style={styles.addBtn}>
-          <Text style={styles.addBtnText}>Add</Text>
-        </PressRing>
+        <GradientButton label="Add Allergen" size="md" onPress={handleAdd} />
       </View>
 
       <PressRing borderRadius={16} onPress={onLogout} style={styles.logoutBtn}>
