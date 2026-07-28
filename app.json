@@ -47,6 +47,12 @@
         }
       ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9fda198d-d3a7-44a3-ae04-e7dbc4a54232"
+      }
+    },
+    "owner": "sedona"
   }
 }
